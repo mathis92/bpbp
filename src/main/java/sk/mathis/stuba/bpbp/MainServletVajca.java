@@ -87,24 +87,18 @@ public class MainServletVajca extends HttpServlet {
         System.out.println("REQUEST -> " + request.toString());
         System.out.println("RESPONSE -> " + response.toString());
         response.setContentType("text/json");
-        JsonObjectBuilder responseJob = null;
         switch (request.getRequestURI()) {
             case "/vehicle/39":
                 System.out.println("som v spoji 39 " + request.getRequestURI() + " " + request.getRequestURL());
-                responseJob = Json.createObjectBuilder();
-                responseJob.add("coordinates", coordinatesJO);
+                Map<String, Object> jwConfig = new HashMap<>();
 
+                jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
+                JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
+                jw.writeObject(coordinatesJO);
                 break;
 
         }
-        if (responseJob != null) {
-            response.setStatus(HttpServletResponse.SC_OK);
-            Map<String, Object> jwConfig = new HashMap<>();
+        response.setStatus(HttpServletResponse.SC_OK);
 
-            jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
-            JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
-            jw.writeObject(responseJob.build());
-
-        }
     }
 }
