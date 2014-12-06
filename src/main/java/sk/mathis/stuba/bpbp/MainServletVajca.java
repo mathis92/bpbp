@@ -22,16 +22,20 @@ public class MainServletVajca extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        System.out.println("[POST]");
         System.out.println("REQUEST -> " + request.toString());
         System.out.println("RESPONSE -> " + response.toString());
-            
+        
         response.setContentType("text/html;charset=utf-8");
         response.setStatus(HttpServletResponse.SC_OK);
         response.getWriter().println("<h1>ššaaaak to postuje</h1>");
+        
+        
     }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        System.out.println("[GET]");
         System.out.println("REQUEST -> " + request.toString());
         System.out.println("RESPONSE -> " + response.toString());
         response.setContentType("text/html;charset=utf-8");
