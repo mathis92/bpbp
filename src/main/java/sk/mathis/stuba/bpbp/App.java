@@ -20,7 +20,7 @@ public class App {
        
        establishment.startServer();
    
-   
+       System.out.println( "Hello World vajca!" );       
    }
 }
 
