@@ -2,6 +2,7 @@ package sk.mathis.stuba.bpbp;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.sql.Connection;
 import java.util.HashMap;
 import java.util.Map;
 import javax.json.Json;
@@ -28,9 +29,10 @@ public class MainServletVajca extends HttpServlet {
     private double longitude;
     private double latitude;
     private JsonObject coordinatesJO;
+    private final Mapper mapper;
 
-    public MainServletVajca() {
-
+    public MainServletVajca(Mapper mapper) {
+        this.mapper = mapper;
     }
 
     @Override
@@ -45,7 +47,7 @@ public class MainServletVajca extends HttpServlet {
 
         Map<String, Boolean> configMap = new HashMap<>();
         configMap.put(JsonGenerator.PRETTY_PRINTING, Boolean.TRUE);
-
+        String vehicle = request.getParameter("vehicle");
         String coordinates = request.getParameter("coordinates");
         System.out.println(coordinates);
 
@@ -61,24 +63,20 @@ public class MainServletVajca extends HttpServlet {
                 System.out.println("lat = " + latitude + "\nlon = " + longitude);
             }
         }
-        /*
-         System.out.println("input stream -> " +is.toString());
-         JsonReaderFactory jrf = Json.createReaderFactory(configMap);
+        if (vehicle != null) {
+            switch (vehicle) {
+                case "39": {
+                        
+                    break;
+                }
+                case "31": {
+                    break;
+                }
 
-         try (JsonReader jr = jrf.createReader(new InputStreamReader(is))) {
-         System.out.println("idem vypisovat");
+            }
 
-         JsonObject jo = jr.readObject();
-         ArrayList<String> config = new ArrayList<>();
-         config.add(jo.getString("latitude"));
-         System.out.println(jo.getString("latitude"));
-         config.add(jo.getString("longitude"));
-         System.out.println(config.size() + " " + config);
-         jr.close();
+        }
 
-            
-         }
-         */
     }
 
     @Override
