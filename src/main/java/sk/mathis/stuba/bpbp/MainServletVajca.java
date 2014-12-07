@@ -5,6 +5,7 @@ import java.io.StringReader;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,6 +14,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.json.Json;
+import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonReader;
@@ -62,11 +64,14 @@ public class MainServletVajca extends HttpServlet {
                 coordinatesJO = jr.readObject();
                 JsonObject latlng = coordinatesJO.getJsonObject("coordinates");
 
-                longitude = latlng.getJsonNumber("longitude").doubleValue();
-                latitude = latlng.getJsonNumber("latitude").doubleValue();
+                longitude = Double.parseDouble(latlng.getString("longitude"));
+                latitude = Double.parseDouble(latlng.getString("latitude"));
                 System.out.println("lat = " + latitude + "\nlon = " + longitude);
             }
         }
+        
+        System.out.println("vehParam " + vehicleParam +" -> "+ coordinatesParam);
+        
         if (vehicleParam != null && coordinatesParam != null) {
             JsonObject coordinates;
             System.out.println("line: " + vehicleParam);
@@ -126,22 +131,45 @@ public class MainServletVajca extends HttpServlet {
                 case "/vehicle/39":
                     System.out.println("som v spoji 39 " + request.getRequestURI() + " " + request.getRequestURL());
 
-                    jw.writeObject(coordinatesJO);
-                    break;
-                case "/updatePoi":
-                    System.out.println("apdejtujem poika");
                     ResultSet rs;
 
-                    String query = "SELECT * FROM `poi`";
+                    String query = "SELECT * FROM `location` order by `id` desc limit 1 ";
                     rs = mapper.executeQuery(query);
 
-                    JsonObjectBuilder poiJOB = Json.createObjectBuilder();
+                    JsonObjectBuilder locationJOB = Json.createObjectBuilder();
+                    ResultSetMetaData metadata = rs.getMetaData();
+                    
                     while (rs.next()) {
-                        for (int i = 0; i < 5; i++) {
-                            poiJOB.add(rs.getMetaData().getColumnName(i), rs.getString(i));
+                        for (int i = 1; i < 8; i++) {
+                           locationJOB.add(metadata.getColumnName(i), rs.getString(i));
                         }
                     }
-                    jw.writeObject(poiJOB.build());
+                    JsonObjectBuilder coordinatesJOB = Json.createObjectBuilder().add("coordinates", locationJOB);
+                 
+                    //System.out.println(coordinatesJOB.build());
+                    
+                    
+                    jw.writeObject(coordinatesJOB.build());
+                    
+                    //jw.writeObject(coordinatesJO);
+                    break;
+                    
+                case "/updatePoi":
+                    System.out.println("apdejtujem poika");
+                    
+
+                    query = "SELECT * FROM `poi`";
+                    rs = mapper.executeQuery(query);
+
+                    JsonArrayBuilder poisJAB = Json.createArrayBuilder();
+                    while (rs.next()) {
+                        JsonObjectBuilder poiJOB = Json.createObjectBuilder();
+                        for (int i = 1; i < 6; i++) {
+                            poiJOB.add(rs.getMetaData().getColumnName(i), rs.getString(i));
+                        }
+                        poisJAB.add(poiJOB);
+                    }
+                    jw.writeArray(poisJAB.build());
                     break;
             }
             response.setStatus(HttpServletResponse.SC_OK);
