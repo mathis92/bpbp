@@ -17,7 +17,7 @@ public class App {
    public static void main(String[] args) throws Exception {
    
        Establishment establishment = new Establishment();
-       
+
        establishment.startServer();
    
        System.out.println( "Hello World vajca nove!" );       
