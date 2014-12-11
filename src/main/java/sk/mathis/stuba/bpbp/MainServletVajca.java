@@ -170,7 +170,8 @@ public class MainServletVajca extends HttpServlet {
                         poisJAB.add(poiJOB);
                     }
                     JsonObjectBuilder poisJOB = Json.createObjectBuilder();
-                    System.out.println(poisJOB.add("pois", poisJAB).build().toString());
+                    poisJOB.add("pois", poisJAB);
+                    System.out.println(poisJOB.toString());
                     jw.writeObject(poisJOB.build());
                     break;
             }
