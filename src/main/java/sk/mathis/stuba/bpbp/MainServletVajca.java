@@ -165,7 +165,7 @@ public class MainServletVajca extends HttpServlet {
                     JsonArrayBuilder poisJAB = Json.createArrayBuilder();
                     while (rs.next()) {
                         JsonObjectBuilder poiJOB = Json.createObjectBuilder();
-                        for (int i = 1; i < 6; i++) {
+                        for (int i = 1; i < 7; i++) {
                             poiJOB.add(rs.getMetaData().getColumnName(i), rs.getString(i));
                         }
                         poisJAB.add(poiJOB);
@@ -174,10 +174,11 @@ public class MainServletVajca extends HttpServlet {
                     JsonObjectBuilder poisJOB = Json.createObjectBuilder();
                     poisJOB.add("pois", poisJAB);
                     JsonObjectBuilder poisListJOB = Json.createObjectBuilder();
-                    poisListJOB.add("poisList", poisJOB);
-                    JsonObject poisListJO = poisListJOB.build();
-                    System.out.println(poisListJO.toString());
-                    jw.writeObject(poisListJO);
+                   // poisListJOB.add("poislist", poisJOB);
+                  //  JsonObject poisListJO = poisListJOB.build();
+                    JsonObject poisJO = poisJOB.build();
+                    System.out.println(poisJO.toString());
+                    jw.writeObject(poisJO);
                     break;
             }
             response.setStatus(HttpServletResponse.SC_OK);
