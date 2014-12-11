@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.json.Json;
+import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
@@ -169,11 +170,14 @@ public class MainServletVajca extends HttpServlet {
                         }
                         poisJAB.add(poiJOB);
                     }
+                    
                     JsonObjectBuilder poisJOB = Json.createObjectBuilder();
                     poisJOB.add("pois", poisJAB);
-                    JsonObject poisJO = poisJOB.build();
-                    System.out.println(poisJO.toString());
-                    jw.writeObject(poisJO);
+                    JsonObjectBuilder poisListJOB = Json.createObjectBuilder();
+                    poisListJOB.add("poisList", poisJOB);
+                    JsonObject poisListJO = poisListJOB.build();
+                    System.out.println(poisListJO.toString());
+                    jw.writeObject(poisListJO);
                     break;
             }
             response.setStatus(HttpServletResponse.SC_OK);
