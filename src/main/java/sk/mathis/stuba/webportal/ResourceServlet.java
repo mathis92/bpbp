@@ -1,4 +1,4 @@
-package webPortal;
+package sk.mathis.stuba.webportal;
 
 import java.io.IOException;
 import java.io.InputStream;

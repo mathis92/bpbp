@@ -1,4 +1,4 @@
-package webPortal;
+package sk.mathis.stuba.webportal;
 
 public class WebMenuItem {
 
