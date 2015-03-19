@@ -26,6 +26,7 @@ public class Mapper {
     private final String[] vehicleTableColumns;
     private final String[] poiTableColumns;
     private Long generatedKey;
+    //WIIOOOOMIIIIIITTTTTT
 
     public Mapper() throws SQLException, ClassNotFoundException, InstantiationException, IllegalAccessException {
         //DriverManager.registerDriver(new com.mysql.jdbc.Driver());
