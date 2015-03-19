@@ -16,7 +16,7 @@ import sk.mathis.stuba.webportal.ResourceServlet;
  *
  * @author martinhudec
  */
-public class Establishment{
+public class VyjebavacKonaDoCreva{
     private Connection connection;
     private Mapper mapper;
     

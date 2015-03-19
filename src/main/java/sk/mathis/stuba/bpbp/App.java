@@ -16,7 +16,7 @@ package sk.mathis.stuba.bpbp;
 public class App {
    public static void main(String[] args) throws Exception {
    
-       Establishment establishment = new Establishment();
+       VyjebavacKonaDoCreva establishment = new VyjebavacKonaDoCreva();
 
        establishment.startServer();
    
