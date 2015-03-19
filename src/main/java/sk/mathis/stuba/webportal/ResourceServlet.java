@@ -13,6 +13,9 @@ public class ResourceServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String requestUrl = request.getRequestURI();
         requestUrl = requestUrl.replaceAll("/resource", "");
+        if (requestUrl.trim().isEmpty()) {
+            requestUrl = "/index.html";
+        }
         String requestFileName = "/webportal" + requestUrl;
         InputStream is = getClass().getResourceAsStream(requestFileName);
         if (is == null) {
@@ -35,6 +38,8 @@ public class ResourceServlet extends HttpServlet {
                 response.setContentType("application/x-font-ttf");
             } else if (fileNameLc.endsWith(".woff")) {
                 response.setContentType("application/x-font-woff");
+            } else if (fileNameLc.endsWith(".html")) {
+                response.setContentType("text/html");
             } else {
                 throw new ServletException("Unknown file type");
             }
