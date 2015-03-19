@@ -25,7 +25,7 @@ public class Establishment{
         Server webserver = new Server(80);
         ServletContextHandler sch = new ServletContextHandler();
         sch.addServlet(new ServletHolder(new PortalServlet()), "/*");
-        sch.addServlet(new ServletHolder(new MainServletVajca(mapper)), "/main/*");
+        sch.addServlet(new ServletHolder(new MainServletVajca(mapper)), "/api/*");
         sch.addServlet(new ServletHolder(new ResourceServlet()), "/resource/*");
         webserver.setHandler(sch);
         webserver.start();

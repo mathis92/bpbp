@@ -59,7 +59,8 @@ public class MainServletVajca extends HttpServlet {
 
         String vehicleParam = request.getParameter("vehicle");
         String coordinatesParam = request.getParameter("coordinates");
-
+        System.out.println(coordinatesParam);
+        
         if (coordinatesParam != null) {
             try (JsonReader jr = Json.createReader(new StringReader(coordinatesParam))) {
                 coordinatesJO = jr.readObject();
