@@ -9,6 +9,7 @@ import java.sql.Connection;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import webPortal.PortalServlet;
 
 /**
  *
@@ -22,7 +23,8 @@ public class Establishment{
         mapper = new Mapper();
         Server webserver = new Server(80);
         ServletContextHandler sch = new ServletContextHandler();
-        sch.addServlet(new ServletHolder(new MainServletVajca(mapper)), "/*");
+        sch.addServlet(new ServletHolder(new PortalServlet()), "/*");
+        //sch.addServlet(new ServletHolder(new MainServletVajca(mapper)), "/*");
         webserver.setHandler(sch);
         webserver.start();
         webserver.join();        
