@@ -8,12 +8,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public class ResourceServlet extends HttpServlet {
-
+    
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String requestUrl = request.getRequestURI();
         requestUrl = requestUrl.replaceAll("/resource", "");
-        if (requestUrl.trim().isEmpty()) {
+        if (requestUrl.equals("/")) {
             requestUrl = "/index.html";
         }
         String requestFileName = "/webportal" + requestUrl;

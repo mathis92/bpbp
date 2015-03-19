@@ -9,34 +9,30 @@ import java.sql.Connection;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import sk.mathis.stuba.webportal.PortalServlet;
 import sk.mathis.stuba.webportal.ResourceServlet;
 
 /**
  *
  * @author martinhudec
  */
-public class VyjebavacKonaDoCreva{
+public class VyjebavacKonaDoCreva {
+
     private Connection connection;
     private Mapper mapper;
-    
+
     public void startServer() throws InterruptedException, Exception {
         mapper = new Mapper();
         Server webserver = new Server(80);
         ServletContextHandler sch = new ServletContextHandler();
-        sch.addServlet(new ServletHolder(new PortalServlet()), "/*");
         sch.addServlet(new ServletHolder(new MainServletVajca(mapper)), "/api/*");
-        sch.addServlet(new ServletHolder(new ResourceServlet()), "/resource/*");
+        sch.addServlet(new ServletHolder(new ResourceServlet()), "/*");
         webserver.setHandler(sch);
         webserver.start();
-        webserver.join();        
+        webserver.join();
     }
 
     public Connection getConnection() {
         return connection;
     }
 
-    
-    
-    
 }
