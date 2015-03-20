@@ -12,7 +12,6 @@ public class ResourceServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String requestUrl = request.getRequestURI();
-        requestUrl = requestUrl.replaceAll("/resource", "");
         if (requestUrl.equals("/")) {
             requestUrl = "/index.html";
         }

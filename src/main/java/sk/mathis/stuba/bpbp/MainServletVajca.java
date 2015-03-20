@@ -125,9 +125,9 @@ public class MainServletVajca extends HttpServlet {
             Map<String, Object> jwConfig = new HashMap<>();
             jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
             JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
-
+            System.out.println("req URI: " + request.getRequestURI());
             switch (request.getRequestURI()) {
-                case "/vehicle/39":
+                case "/api/vehicle/39":
                     System.out.println("som v spoji 39 " + request.getRequestURI() + " " + request.getRequestURL());
 
                     ResultSet rs;
@@ -144,19 +144,10 @@ public class MainServletVajca extends HttpServlet {
                         }
                     }
                     JsonObjectBuilder coordinatesJOB = Json.createObjectBuilder().add("coordinates", locationJOB);
-                 
-                    //System.out.println(coordinatesJOB.build());
-                    
-                    
                     jw.writeObject(coordinatesJOB.build());
-                    
-                    //jw.writeObject(coordinatesJO);
                     break;
                     
-                case "/updatePoi":
-                    System.out.println("apdejtujem poika");
-                    
-
+                case "/api/updatePoi":                 
                     query = "SELECT * FROM `poi`";
                     rs = mapper.executeQuery(query);
 
@@ -167,17 +158,16 @@ public class MainServletVajca extends HttpServlet {
                             poiJOB.add(rs.getMetaData().getColumnName(i), rs.getString(i));
                         }
                         poisJAB.add(poiJOB);
-                    }
-                    
+                    }                    
                     JsonObjectBuilder poisJOB = Json.createObjectBuilder();
                     poisJOB.add("pois", poisJAB);
-                    JsonObjectBuilder poisListJOB = Json.createObjectBuilder();
-                   // poisListJOB.add("poislist", poisJOB);
-                  //  JsonObject poisListJO = poisListJOB.build();
                     JsonObject poisJO = poisJOB.build();
                     System.out.println(poisJO.toString());
                     jw.writeObject(poisJO);
                     break;
+                default: {
+                   response.getOutputStream().write(("invalid call " + request.getRequestURI()).getBytes());
+                }
             }
             response.setStatus(HttpServletResponse.SC_OK);
         } catch (SQLException ex) {
