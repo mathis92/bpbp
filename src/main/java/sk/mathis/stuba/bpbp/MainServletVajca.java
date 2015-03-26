@@ -78,6 +78,8 @@ public class MainServletVajca extends HttpServlet {
             try (JsonReader jr = Json.createReader(new StringReader(coordinatesParam))) {
                 coordinatesJO = jr.readObject();
                 coordinates = coordinatesJO.getJsonObject("coordinates");
+                System.out.println(coordinates);
+                System.out.println(coordinatesJO);
             }
 
             List<String> locationData = new ArrayList<>();
@@ -144,6 +146,9 @@ public class MainServletVajca extends HttpServlet {
                         }
                     }
                     JsonObjectBuilder coordinatesJOB = Json.createObjectBuilder().add("coordinates", locationJOB);
+                    
+                    
+                    
                     jw.writeObject(coordinatesJOB.build());
                     break;
                     
