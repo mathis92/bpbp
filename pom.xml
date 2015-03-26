@@ -183,6 +183,11 @@
             <version>4.3.8.Final</version>
             <type>jar</type>
         </dependency>
+        <dependency>
+            <groupId>stuba</groupId>
+            <artifactId>BpbpHibernateMapper</artifactId>
+            <version>1.0</version>
+        </dependency>
     </dependencies>
     
 </project>

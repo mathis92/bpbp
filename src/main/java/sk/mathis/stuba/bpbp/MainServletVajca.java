@@ -50,7 +50,7 @@ public class MainServletVajca extends HttpServlet {
         response.setContentType("text/html;charset=utf-8");
         response.setStatus(HttpServletResponse.SC_OK);
         response.getWriter().println("<h1>ššaaaak to postuje</h1>");
-
+                
         Map<String, Boolean> configMap = new HashMap<>();
         configMap.put(JsonGenerator.PRETTY_PRINTING, Boolean.TRUE);
 
