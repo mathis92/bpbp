@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
  */
 public class DatabaseConnector {
 
-    private final org.slf4j.Logger logger = LoggerFactory.getLogger(app.class);
+    private final org.slf4j.Logger logger = LoggerFactory.getLogger(DatabaseConnector.class);
 
     public DatabaseConnector() throws Exception {
 
