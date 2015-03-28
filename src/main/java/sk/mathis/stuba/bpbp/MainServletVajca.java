@@ -1,6 +1,10 @@
 package sk.mathis.stuba.bpbp;
 
+import clojure.test$file_and_line;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.StringReader;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -16,11 +20,15 @@ import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonReader;
+import javax.json.JsonValue;
 import javax.json.JsonWriter;
+import javax.json.JsonWriterFactory;
 import javax.json.stream.JsonGenerator;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.slf4j.LoggerFactory;
+import stuba.bpbphibernatemapper.GtfsStops;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -37,6 +45,7 @@ public class MainServletVajca extends HttpServlet {
     private double latitude;
     private JsonObject coordinatesJO;
     private final Mapper mapper;
+    private final org.slf4j.Logger logger = LoggerFactory.getLogger(MainServletVajca.class);
 
     public MainServletVajca(Mapper mapper) {
         this.mapper = mapper;
@@ -50,14 +59,14 @@ public class MainServletVajca extends HttpServlet {
         response.setContentType("text/html;charset=utf-8");
         response.setStatus(HttpServletResponse.SC_OK);
         response.getWriter().println("<h1>ššaaaak to postuje</h1>");
-                
+
         Map<String, Boolean> configMap = new HashMap<>();
         configMap.put(JsonGenerator.PRETTY_PRINTING, Boolean.TRUE);
 
         String vehicleParam = request.getParameter("vehicle");
         String coordinatesParam = request.getParameter("coordinates");
         System.out.println(coordinatesParam);
-        
+
         if (coordinatesParam != null) {
             try (JsonReader jr = Json.createReader(new StringReader(coordinatesParam))) {
                 coordinatesJO = jr.readObject();
@@ -68,9 +77,9 @@ public class MainServletVajca extends HttpServlet {
                 System.out.println("lat = " + latitude + "\nlon = " + longitude);
             }
         }
-        
-        System.out.println("vehParam " + vehicleParam +" -> "+ coordinatesParam);
-        
+
+        System.out.println("vehParam " + vehicleParam + " -> " + coordinatesParam);
+
         if (vehicleParam != null && coordinatesParam != null) {
             JsonObject coordinates;
             System.out.println("line: " + vehicleParam);
@@ -129,6 +138,28 @@ public class MainServletVajca extends HttpServlet {
             JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
             System.out.println("req URI: " + request.getRequestURI());
             switch (request.getRequestURI()) {
+                case "/api/allStops": {
+                    
+                    logger.debug("in api call allStops " + request.getRequestURI() + " " + request.getRequestURL());
+                    List<GtfsStops> stopsList = DatabaseConnector.getSession().createCriteria(GtfsStops.class).list();
+                    JsonArrayBuilder stopsJAB = Json.createArrayBuilder();
+                    for (GtfsStops stop : stopsList) {
+                        if (stop.getId().getId().endsWith("1")) {
+                            JsonObjectBuilder stopJOB = Json.createObjectBuilder();
+                            stopJOB.add(stop.getId().getClass().getSimpleName(), stop.getId().getId());
+                            stopJOB.add("name", stop.getName());
+                            stopJOB.add("lat", stop.getLat());
+                            stopJOB.add("lon", stop.getLon());
+                            stopsJAB.add(stopJOB);
+                        }
+                    }
+                    JsonObjectBuilder stopsJOB = Json.createObjectBuilder();
+                    stopsJOB.add("stops", stopsJAB);
+                    JsonObject stopsJO = stopsJOB.build();
+                    System.out.println(stopsJO.toString());
+                    jw.writeObject(stopsJO);
+                }
+
                 case "/api/vehicle/39":
                     System.out.println("som v spoji 39 " + request.getRequestURI() + " " + request.getRequestURL());
 
@@ -139,20 +170,18 @@ public class MainServletVajca extends HttpServlet {
 
                     JsonObjectBuilder locationJOB = Json.createObjectBuilder();
                     ResultSetMetaData metadata = rs.getMetaData();
-                    
+
                     while (rs.next()) {
                         for (int i = 1; i < 8; i++) {
-                           locationJOB.add(metadata.getColumnName(i), rs.getString(i));
+                            locationJOB.add(metadata.getColumnName(i), rs.getString(i));
                         }
                     }
                     JsonObjectBuilder coordinatesJOB = Json.createObjectBuilder().add("coordinates", locationJOB);
-                    
-                    
-                    
+
                     jw.writeObject(coordinatesJOB.build());
                     break;
-                    
-                case "/api/updatePoi":                 
+
+                case "/api/updatePoi":
                     query = "SELECT * FROM `poi`";
                     rs = mapper.executeQuery(query);
 
@@ -163,7 +192,7 @@ public class MainServletVajca extends HttpServlet {
                             poiJOB.add(rs.getMetaData().getColumnName(i), rs.getString(i));
                         }
                         poisJAB.add(poiJOB);
-                    }                    
+                    }
                     JsonObjectBuilder poisJOB = Json.createObjectBuilder();
                     poisJOB.add("pois", poisJAB);
                     JsonObject poisJO = poisJOB.build();
@@ -171,7 +200,7 @@ public class MainServletVajca extends HttpServlet {
                     jw.writeObject(poisJO);
                     break;
                 default: {
-                   response.getOutputStream().write(("invalid call " + request.getRequestURI()).getBytes());
+                    response.getOutputStream().write(("invalid call " + request.getRequestURI()).getBytes());
                 }
             }
             response.setStatus(HttpServletResponse.SC_OK);

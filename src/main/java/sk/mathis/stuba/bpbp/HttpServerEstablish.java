@@ -17,7 +17,7 @@ import sk.mathis.stuba.webportal.ResourceServlet;
  */
 public class HttpServerEstablish {
 
-    private Connection connection;
+   
     private Mapper mapper;
 
     public void startServer() throws InterruptedException, Exception {
@@ -31,8 +31,5 @@ public class HttpServerEstablish {
         webserver.join();
     }
 
-    public Connection getConnection() {
-        return connection;
-    }
 
 }

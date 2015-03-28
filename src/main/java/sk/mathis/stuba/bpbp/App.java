@@ -4,23 +4,24 @@
  * and open the template in the editor.
  */
 package sk.mathis.stuba.bpbp;
+
 /**
  *
  * @author martinhudec
  */
 
-    /* HttpsHello.java
+/* HttpsHello.java
  - Copyright (c) 2014, HerongYang.com, All Rights Reserved.
  */
-
 public class App {
-   public static void main(String[] args) throws Exception {
-   
-       HttpServerEstablish establishment = new HttpServerEstablish();
 
-       establishment.startServer();
-   
-       System.out.println( "Hello World vajca nove!" );       
-   }
+    public static void main(String[] args) throws Exception {
+        DatabaseConnector dc = new DatabaseConnector();
+        
+        HttpServerEstablish establishment = new HttpServerEstablish();
+        
+        System.out.println("Hello World vajca nove!");
+        establishment.startServer();
+
+    }
 }
-
