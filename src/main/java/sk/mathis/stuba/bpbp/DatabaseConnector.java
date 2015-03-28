@@ -14,19 +14,11 @@ import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.criterion.Restrictions;
 
-import org.onebusaway.gtfs.impl.GtfsDaoImpl;
-import org.onebusaway.gtfs.impl.StopTimeArray;
-import org.onebusaway.gtfs.model.Agency;
-import org.onebusaway.gtfs.model.Route;
-import org.onebusaway.gtfs.model.Stop;
-import org.onebusaway.gtfs.model.StopTime;
-import org.onebusaway.gtfs.model.Trip;
-import org.onebusaway.gtfs.serialization.GtfsReader;
 import org.slf4j.LoggerFactory;
 import stuba.bpbphibernatemapper.GtfsRoutes;
 import stuba.bpbphibernatemapper.GtfsStopTimes;
+import stuba.bpbphibernatemapper.GtfsStops;
 import stuba.bpbphibernatemapper.GtfsTrips;
-import stuba.bpbphibernatemapper.Poi;
 
 /**
  *
@@ -34,8 +26,7 @@ import stuba.bpbphibernatemapper.Poi;
  */
 public class DatabaseConnector {
 
-    private final org.slf4j.Logger logger = LoggerFactory.getLogger(DatabaseConnector.class);
-    private static Session session;
+    private final org.slf4j.Logger logger = LoggerFactory.getLogger(DatabaseConnector.class);        
     private static  SessionFactory sessionFactory;
   
     public DatabaseConnector() {
@@ -47,15 +38,15 @@ public class DatabaseConnector {
     }
     
     public static Session getSession(){
-        return sessionFactory.openSession();
+        Session session = sessionFactory.openSession();
+        session.beginTransaction(); //open the transaction
+        return session;
     }
     
     
     
     public void testConnection() throws Exception {
-
-        System.out.println("Trying to create a test connection with the database.");
-        session = sessionFactory.openSession();
+        Session session = DatabaseConnector.getSession();        
         logger.debug("Test connection with the database created successfuly.");
         Date date = new Date();
         for (GtfsRoutes routes : (List<GtfsRoutes>) session.createCriteria(GtfsRoutes.class).list()) {
@@ -66,9 +57,8 @@ public class DatabaseConnector {
         
         
         Date startTime = new Date();
-        session.beginTransaction();
 
-        List<Stop> stopList = session.createCriteria(Stop.class).list();
+        List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).list();
         //MdsDiagnostician testDiagnostician = ((MdsTesting) session.createCriteria(MdsTesting.class).add(Restrictions.eq("mdsDevice", device)).list().get(0)).getMdsDiagnostician();
 
         GtfsRoutes tricatdevina = (GtfsRoutes) session.createCriteria(GtfsRoutes.class).add(Restrictions.eq("shortName", "39")).list().get(0);
@@ -79,7 +69,7 @@ public class DatabaseConnector {
             List<GtfsStopTimes> stopTimeList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsTrips", trip)).list();
             System.out.println(stopTimeList.size() + " velkost stoptime array list");
             for (GtfsStopTimes stopTime : stopTimeList) {
-                System.out.println(stopTime.getGtfsStops().getName() + " " + stopTime.getGtfsStops().getLat() + " " + stopTime.getGtfsStops().getLon() + " " + funkcia(stopTime.getArrivalTime()));
+                System.out.println(stopTime.getGtfsStops().getName() + " " + stopTime.getGtfsStops().getLat() + " " + stopTime.getGtfsStops().getLon() + " " + secsToHMS(stopTime.getArrivalTime()));
             }
             break;
         }
@@ -87,7 +77,7 @@ public class DatabaseConnector {
 
     }
 
-    public String funkcia(int totalSecs) {
+    public String secsToHMS(int totalSecs) {
         int hours = totalSecs / 3600;
         int minutes = (totalSecs % 3600) / 60;
         int seconds = totalSecs % 60;

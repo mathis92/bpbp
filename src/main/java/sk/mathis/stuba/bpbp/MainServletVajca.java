@@ -1,15 +1,10 @@
 package sk.mathis.stuba.bpbp;
 
-import clojure.test$file_and_line;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.StringReader;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,15 +15,18 @@ import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonReader;
-import javax.json.JsonValue;
 import javax.json.JsonWriter;
-import javax.json.JsonWriterFactory;
 import javax.json.stream.JsonGenerator;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.hibernate.Session;
 import org.slf4j.LoggerFactory;
 import stuba.bpbphibernatemapper.GtfsStops;
+import stuba.bpbphibernatemapper.GtfsTrips;
+import stuba.bpbphibernatemapper.GtfsTripsId;
+import stuba.bpbphibernatemapper.Poi;
+import stuba.bpbphibernatemapper.TripPositions;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -41,11 +39,12 @@ import stuba.bpbphibernatemapper.GtfsStops;
  */
 public class MainServletVajca extends HttpServlet {
 
-    private double longitude;
-    private double latitude;
-    private JsonObject coordinatesJO;
     private final Mapper mapper;
     private final org.slf4j.Logger logger = LoggerFactory.getLogger(MainServletVajca.class);
+    
+    private Session session;
+    
+    private String agencyId = "01";
 
     public MainServletVajca(Mapper mapper) {
         this.mapper = mapper;
@@ -66,37 +65,34 @@ public class MainServletVajca extends HttpServlet {
         String vehicleParam = request.getParameter("vehicle");
         String coordinatesParam = request.getParameter("coordinates");
         System.out.println(coordinatesParam);
-
+        /*
         if (coordinatesParam != null) {
             try (JsonReader jr = Json.createReader(new StringReader(coordinatesParam))) {
                 coordinatesJO = jr.readObject();
-                JsonObject latlng = coordinatesJO.getJsonObject("coordinates");
+                JsonObject latlon = coordinatesJO.getJsonObject("coordinates");
 
-                longitude = Double.parseDouble(latlng.getString("longitude"));
-                latitude = Double.parseDouble(latlng.getString("latitude"));
+                longitude = Double.parseDouble(latlon.getString("longitude"));
+                latitude = Double.parseDouble(latlon.getString("latitude"));
                 System.out.println("lat = " + latitude + "\nlon = " + longitude);
             }
         }
-
-        System.out.println("vehParam " + vehicleParam + " -> " + coordinatesParam);
-
+        */
         if (vehicleParam != null && coordinatesParam != null) {
             JsonObject coordinates;
             System.out.println("line: " + vehicleParam);
 
             try (JsonReader jr = Json.createReader(new StringReader(coordinatesParam))) {
-                coordinatesJO = jr.readObject();
-                coordinates = coordinatesJO.getJsonObject("coordinates");
+                //coordinatesJO = jr.readObject();
+                coordinates = jr.readObject().getJsonObject("coordinates");
                 System.out.println(coordinates);
-                System.out.println(coordinatesJO);
             }
-
-            List<String> locationData = new ArrayList<>();
-            locationData.add(coordinates.getString("latitude"));
-            locationData.add(coordinates.getString("longitude"));
-            locationData.add(coordinates.getString("accuracy"));
-            locationData.add(coordinates.getString("speed"));
-
+            
+            TripPositions tripPosition = new TripPositions(new GtfsTrips(new GtfsTripsId(agencyId, coordinates.getString("gtfs_trip_id"))), Float.parseFloat(coordinates.getString("lat")), Float.parseFloat(coordinates.getString("lon")), 0, Float.parseFloat(coordinates.getString("spd")), Float.parseFloat(coordinates.getString("acc")), null);
+            session = DatabaseConnector.getSession();
+            session.save(tripPosition);
+            session.getTransaction().commit();                                    
+            
+            /*
             switch (vehicleParam) {
                 case "39": {
                     try {
@@ -120,9 +116,8 @@ public class MainServletVajca extends HttpServlet {
                 }
 
             }
-
+            */
         }
-
     }
 
     @Override
@@ -136,12 +131,16 @@ public class MainServletVajca extends HttpServlet {
             Map<String, Object> jwConfig = new HashMap<>();
             jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
             JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
-            System.out.println("req URI: " + request.getRequestURI());
+            
+            System.out.println("req URI: " + request.getRequestURI());            
             switch (request.getRequestURI()) {
                 case "/api/allStops": {
                     
                     logger.debug("in api call allStops " + request.getRequestURI() + " " + request.getRequestURL());
-                    List<GtfsStops> stopsList = DatabaseConnector.getSession().createCriteria(GtfsStops.class).list();
+                    session = DatabaseConnector.getSession();
+                    List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class).list();
+                    session.getTransaction().commit(); //closes transaction
+                    
                     JsonArrayBuilder stopsJAB = Json.createArrayBuilder();
                     for (GtfsStops stop : stopsList) {
                         if (stop.getId().getId().endsWith("1")) {
@@ -181,20 +180,26 @@ public class MainServletVajca extends HttpServlet {
                     jw.writeObject(coordinatesJOB.build());
                     break;
 
-                case "/api/updatePoi":
-                    query = "SELECT * FROM `poi`";
-                    rs = mapper.executeQuery(query);
-
-                    JsonArrayBuilder poisJAB = Json.createArrayBuilder();
-                    while (rs.next()) {
+                case "/api/getPoi":
+                    session = DatabaseConnector.getSession();
+                    List<Poi> poiList = session.createCriteria(Poi.class).list();
+                    session.getTransaction().commit();
+                    
+                    JsonArrayBuilder poiJAB = Json.createArrayBuilder();
+                    
+                    for(Poi poi : poiList) {
                         JsonObjectBuilder poiJOB = Json.createObjectBuilder();
-                        for (int i = 1; i < 7; i++) {
-                            poiJOB.add(rs.getMetaData().getColumnName(i), rs.getString(i));
-                        }
-                        poisJAB.add(poiJOB);
+                        poiJOB.add("title", poi.getTitle());
+                        poiJOB.add("lat", poi.getLat());
+                        poiJOB.add("lon", poi.getLon());
+                        poiJOB.add("radius", poi.getRadius());
+                        poiJOB.add("filePath", poi.getFilePath());
+                        
+                        poiJAB.add(poiJOB);
                     }
+
                     JsonObjectBuilder poisJOB = Json.createObjectBuilder();
-                    poisJOB.add("pois", poisJAB);
+                    poisJOB.add("poiList", poiJAB);
                     JsonObject poisJO = poisJOB.build();
                     System.out.println(poisJO.toString());
                     jw.writeObject(poisJO);
