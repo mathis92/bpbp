@@ -36,7 +36,8 @@ public class DatabaseConnector {
 
     private final org.slf4j.Logger logger = LoggerFactory.getLogger(DatabaseConnector.class);
     private static Session session;
-    private final SessionFactory sessionFactory;
+    private static  SessionFactory sessionFactory;
+  
     public DatabaseConnector() {
         Configuration configuration = new Configuration();
         configuration.configure("hibernate.cfg.xml");
@@ -45,7 +46,7 @@ public class DatabaseConnector {
         sessionFactory = configuration.buildSessionFactory(ssrb.build());
     }
     
-    public Session getSession(){
+    public static Session getSession(){
         return sessionFactory.openSession();
     }
     

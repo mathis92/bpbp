@@ -16,6 +16,7 @@ package sk.mathis.stuba.bpbp;
 public class App {
 
     public static void main(String[] args) throws Exception {
+        DatabaseConnector dc = new DatabaseConnector();
         
         HttpServerEstablish establishment = new HttpServerEstablish();
         
