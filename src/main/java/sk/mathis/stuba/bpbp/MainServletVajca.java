@@ -88,7 +88,8 @@ public class MainServletVajca extends HttpServlet {
             TripPositions tripPosition = new TripPositions(new GtfsTrips(new GtfsTripsId(agencyId, coordinates.getString("gtfs_trip_id"))), Float.parseFloat(coordinates.getString("lat")), Float.parseFloat(coordinates.getString("lon")), 0, Float.parseFloat(coordinates.getString("spd")), Float.parseFloat(coordinates.getString("acc")));
             session = DatabaseConnector.getSession();
             session.save(tripPosition);
-            session.getTransaction().commit();                                    
+            session.getTransaction().commit();        
+            session.close();
             
             /*
             switch (vehicleParam) {
