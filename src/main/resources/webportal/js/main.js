@@ -28,9 +28,9 @@ function fetch_location() {
 
 $(document).ready(function() {
     fetch_location();
-    $.get("/api/updatePoi", null, function(data) {
+    $.get("/api/getPoi", null, function(data) {
         var html = "";
-        var poiArray = data.pois;
+        var poiArray = data.poiList;
         for (var i in poiArray) {
             var poi = poiArray[i];
             html += "<tr>";
@@ -60,8 +60,10 @@ $(document).ready(function() {
                 $("#testAlert").html(message);
             }
         });
+        /*
         $("#testTable tbody a[data-poi-goto]").click(function() {
             map.setCenter(mapMarkers[$(this).attr("data-poi-goto")].getPosition());
         });
+        */
     }, "json");
 });

@@ -53,8 +53,6 @@ public class MainServletVajca extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         System.out.println("[POST]");
-        System.out.println("REQUEST -> " + request.toString());
-        System.out.println("RESPONSE -> " + response.toString());
         response.setContentType("text/html;charset=utf-8");
         response.setStatus(HttpServletResponse.SC_OK);
         response.getWriter().println("<h1>ššaaaak to postuje</h1>");
@@ -87,7 +85,7 @@ public class MainServletVajca extends HttpServlet {
                 System.out.println(coordinates);
             }
             
-            TripPositions tripPosition = new TripPositions(new GtfsTrips(new GtfsTripsId(agencyId, coordinates.getString("gtfs_trip_id"))), Float.parseFloat(coordinates.getString("lat")), Float.parseFloat(coordinates.getString("lon")), 0, Float.parseFloat(coordinates.getString("spd")), Float.parseFloat(coordinates.getString("acc")), null);
+            TripPositions tripPosition = new TripPositions(new GtfsTrips(new GtfsTripsId(agencyId, coordinates.getString("gtfs_trip_id"))), Float.parseFloat(coordinates.getString("lat")), Float.parseFloat(coordinates.getString("lon")), 0, Float.parseFloat(coordinates.getString("spd")), Float.parseFloat(coordinates.getString("acc")));
             session = DatabaseConnector.getSession();
             session.save(tripPosition);
             session.getTransaction().commit();                                    
@@ -124,15 +122,13 @@ public class MainServletVajca extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
             System.out.println("[GET]");
-            System.out.println("REQUEST -> " + request.toString());
-            System.out.println("RESPONSE -> " + response.toString());
             response.setContentType("text/json");
 
             Map<String, Object> jwConfig = new HashMap<>();
             jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
             JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
             
-            System.out.println("req URI: " + request.getRequestURI());            
+            System.out.println("[req URI]: " + request.getRequestURI());            
             switch (request.getRequestURI()) {
                 case "/api/allStops": {
                     
