@@ -12,7 +12,7 @@ google.maps.event.addDomListener(window, 'load', map_initialize);
 
 function fetch_location() {
     $.get("/api/vehicle/39", null, function(data) {
-        var coords = data.coordinates;
+        var coords = data.positionList;
         var myLatlng = new google.maps.LatLng(coords.latitude, coords.longitude);
         var marker = new google.maps.Marker({
             position: myLatlng,
@@ -20,9 +20,11 @@ function fetch_location() {
             title: "Buseus 39 locationis ala " + coords.time
         });
         map.setCenter(marker.getPosition());
+        /*
         setTimeout(function() {
             fetch_location();
         }, 1500);
+        */
     }, "json");
 }
 

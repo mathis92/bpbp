@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package sk.mathis.stuba.bpbp;
+package sk.cagani.stuba.bpbp.serverApp;
 
 import java.io.File;
 import java.util.Date;
