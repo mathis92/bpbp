@@ -72,7 +72,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>sk.mathis.stuba.bpbp.App</mainClass>
+                            <mainClass>sk.cagani.stuba.bpbp.serverApp.AppInit</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
