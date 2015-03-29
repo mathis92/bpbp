@@ -77,7 +77,7 @@ public class DatabaseConnector {
 
     }
 
-    public static String secsToHMS(int totalSecs) {
+    public String secsToHMS(int totalSecs) {
         int hours = totalSecs / 3600;
         int minutes = (totalSecs % 3600) / 60;
         int seconds = totalSecs % 60;
