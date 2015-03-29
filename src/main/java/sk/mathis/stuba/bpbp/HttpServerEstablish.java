@@ -25,6 +25,7 @@ public class HttpServerEstablish {
         Server webserver = new Server(80);
         ServletContextHandler sch = new ServletContextHandler();
         sch.addServlet(new ServletHolder(new MainServletVajca(mapper)), "/api/*");
+        sch.addServlet(new ServletHolder(new MainServletDevice()), "/api/device/*");
         sch.addServlet(new ServletHolder(new ResourceServlet()), "/*");
         webserver.setHandler(sch);
         webserver.start();
