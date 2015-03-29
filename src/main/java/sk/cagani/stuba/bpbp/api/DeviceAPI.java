@@ -1,20 +1,13 @@
-package sk.mathis.stuba.bpbp;
+package sk.cagani.stuba.bpbp.api;
 
 import java.io.IOException;
-import java.io.StringReader;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.json.Json;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
-import javax.json.JsonReader;
 import javax.json.JsonWriter;
 import javax.json.stream.JsonGenerator;
 import javax.servlet.http.HttpServlet;
@@ -22,11 +15,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.hibernate.Session;
 import org.slf4j.LoggerFactory;
+import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
 import stuba.bpbphibernatemapper.GtfsStops;
-import stuba.bpbphibernatemapper.GtfsTrips;
-import stuba.bpbphibernatemapper.GtfsTripsId;
-import stuba.bpbphibernatemapper.Poi;
-import stuba.bpbphibernatemapper.TripPositions;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -37,9 +27,9 @@ import stuba.bpbphibernatemapper.TripPositions;
  *
  * @author martinhudec
  */
-public class MainServletDevice extends HttpServlet {
+public class DeviceAPI extends HttpServlet {
 
-    private final org.slf4j.Logger logger = LoggerFactory.getLogger(MainServletDevice.class);
+    private final org.slf4j.Logger logger = LoggerFactory.getLogger(DeviceAPI.class);
 
     private Session session;
 

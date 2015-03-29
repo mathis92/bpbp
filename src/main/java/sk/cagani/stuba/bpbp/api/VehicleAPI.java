@@ -1,15 +1,10 @@
-package sk.mathis.stuba.bpbp;
+package sk.cagani.stuba.bpbp.api;
 
 import java.io.IOException;
 import java.io.StringReader;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.json.Json;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
@@ -22,6 +17,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.hibernate.Session;
 import org.slf4j.LoggerFactory;
+import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
 import stuba.bpbphibernatemapper.GtfsAgencies;
 import stuba.bpbphibernatemapper.GtfsStops;
 import stuba.bpbphibernatemapper.GtfsTrips;
@@ -38,15 +34,15 @@ import stuba.bpbphibernatemapper.TripPositions;
  *
  * @author martinhudec
  */
-public class MainServletVajca extends HttpServlet {
+public class VehicleAPI extends HttpServlet {
     
-    private final org.slf4j.Logger logger = LoggerFactory.getLogger(MainServletVajca.class);
+    private final org.slf4j.Logger logger = LoggerFactory.getLogger(VehicleAPI.class);
 
     private Session session;
 
     private String agencyId = null;
 
-    public MainServletVajca(Mapper mapper) {
+    public VehicleAPI() {
         agencyId = DatabaseConnector.getSession().createCriteria(GtfsAgencies.class).list().get(0).toString();
     }
 

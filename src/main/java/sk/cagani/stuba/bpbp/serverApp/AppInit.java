@@ -3,7 +3,14 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package sk.mathis.stuba.bpbp;
+package sk.cagani.stuba.bpbp.serverApp;
+
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
+import sk.cagani.stuba.bpbp.api.DeviceAPI;
+import sk.cagani.stuba.bpbp.api.VehicleAPI;
+import sk.cagani.stuba.bpbp.webportal.ResourceServlet;
 
 /**
  *
@@ -13,15 +20,21 @@ package sk.mathis.stuba.bpbp;
 /* HttpsHello.java
  - Copyright (c) 2014, HerongYang.com, All Rights Reserved.
  */
-public class App {
+public class AppInit {
 
     public static void main(String[] args) throws Exception {
         DatabaseConnector dc = new DatabaseConnector();
-        
-        HttpServerEstablish establishment = new HttpServerEstablish();
-        
-        System.out.println("Hello World vajca nove!");
-        establishment.startServer();
-
+        new AppInit().startServlets();
+    }
+    
+    private void startServlets() throws InterruptedException, Exception {
+        Server webserver = new Server(80);
+        ServletContextHandler sch = new ServletContextHandler();
+        sch.addServlet(new ServletHolder(new VehicleAPI()), "/api/vehicle/*");
+        sch.addServlet(new ServletHolder(new DeviceAPI()), "/api/device/*");
+        sch.addServlet(new ServletHolder(new ResourceServlet()), "/*");
+        webserver.setHandler(sch);
+        webserver.start();
+        webserver.join();
     }
 }
