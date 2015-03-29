@@ -16,9 +16,11 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.hibernate.Session;
+import org.hibernate.criterion.Restrictions;
 import org.slf4j.LoggerFactory;
 import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
 import stuba.bpbphibernatemapper.GtfsAgencies;
+import stuba.bpbphibernatemapper.GtfsStopTimes;
 import stuba.bpbphibernatemapper.GtfsStops;
 import stuba.bpbphibernatemapper.GtfsTrips;
 import stuba.bpbphibernatemapper.GtfsTripsId;
@@ -35,7 +37,7 @@ import stuba.bpbphibernatemapper.TripPositions;
  * @author martinhudec
  */
 public class VehicleAPI extends HttpServlet {
-    
+
     private final org.slf4j.Logger logger = LoggerFactory.getLogger(VehicleAPI.class);
 
     private Session session;
@@ -44,131 +46,66 @@ public class VehicleAPI extends HttpServlet {
 
     public VehicleAPI() {
         agencyId = DatabaseConnector.getSession().createCriteria(GtfsAgencies.class).list().get(0).toString();
+        System.out.println("agency: " + agencyId);
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         System.out.println("[POST]");
-        
-        response.setContentType("text/html;charset=utf-8");
-        response.setStatus(HttpServletResponse.SC_OK);
-        //response.getWriter().println("<h1>ššaaaak to postuje</h1>");
 
-        Map<String, Boolean> configMap = new HashMap<>();
-        configMap.put(JsonGenerator.PRETTY_PRINTING, Boolean.TRUE);
+        switch (request.getRequestURI()) {
+            case "/api/vehicle/updateLocation":
+                TripPositions tripPosition = new TripPositions(new GtfsTrips(new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id"))), Float.parseFloat(request.getParameter("lat")), Float.parseFloat(request.getParameter("lon")), 0, Float.parseFloat(request.getParameter("spd")), Float.parseFloat(request.getParameter("acc")));
 
-        String vehicleParam = request.getParameter("vehicle");
-        String coordinatesParam = request.getParameter("coordinates");
-        System.out.println(coordinatesParam);
-        /*
-         if (coordinatesParam != null) {
-         try (JsonReader jr = Json.createReader(new StringReader(coordinatesParam))) {
-         coordinatesJO = jr.readObject();
-         JsonObject latlon = coordinatesJO.getJsonObject("coordinates");
+                session = DatabaseConnector.getSession();
+                session.save(tripPosition);
+                session.getTransaction().commit();
+                session.close();
+                //v buducnosti tu zrob to cekovanie pred zastavkou a potom ak hej, tak treba tie linky najblizsie poslat abo co
+                break;
+            case "/api/vehicle/getStopsAndPoi":
+                response.setContentType("text/json;charset=utf-8");
+                Map<String, Boolean> jwConfig = new HashMap<>();
+                jwConfig.put(JsonGenerator.PRETTY_PRINTING, Boolean.TRUE);
+                JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
 
-         longitude = Double.parseDouble(latlon.getString("longitude"));
-         latitude = Double.parseDouble(latlon.getString("latitude"));
-         System.out.println("lat = " + latitude + "\nlon = " + longitude);
-         }
-         }
-         */
-        if (vehicleParam != null && coordinatesParam != null) {
-            JsonObject coordinates;
-            System.out.println("line: " + vehicleParam);
+                session = DatabaseConnector.getSession();
+                List<Poi> poiList = session.createCriteria(Poi.class).list();                               
+                List<GtfsStopTimes> stopTimeList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.like("trip_id", request.getParameter("gtfs_trip_id"))).list();
+                
+                //JsonArrayBuilder stopsJAB = Json.createArrayBuilder();
+                
+                for (GtfsStopTimes stopTime : stopTimeList) {
+                    //JsonObjectBuilder stopJOB = Json.createObjectBuilder();
+                    System.out.println("zastafka: " + stopTime.getGtfsStops().getName() + "  cas: " + stopTime.getArrivalTime());                                  
+                }               
+                session.getTransaction().commit();
+                session.close();
 
-            response.setContentType("text/json");
-            Map<String, Object> jwConfig = new HashMap<>();
-            jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
-            JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
+                JsonArrayBuilder poiJAB = Json.createArrayBuilder();
 
-            try (JsonReader jr = Json.createReader(new StringReader(coordinatesParam))) {
-                //coordinatesJO = jr.readObject();
-                coordinates = jr.readObject().getJsonObject("coordinates");
-                System.out.println(coordinates);
-            }
+                for (Poi poi : poiList) {
+                    JsonObjectBuilder poiJOB = Json.createObjectBuilder();
+                    poiJOB.add("title", poi.getTitle());
+                    poiJOB.add("lat", poi.getLat());
+                    poiJOB.add("lon", poi.getLon());
+                    poiJOB.add("radius", poi.getRadius());
+                    poiJOB.add("filePath", poi.getFilePath());
 
-            TripPositions tripPosition = new TripPositions(new GtfsTrips(new GtfsTripsId(agencyId, coordinates.getString("gtfs_trip_id"))), Float.parseFloat(coordinates.getString("lat")), Float.parseFloat(coordinates.getString("lon")), 0, Float.parseFloat(coordinates.getString("spd")), Float.parseFloat(coordinates.getString("acc")));
-            session = DatabaseConnector.getSession();
-            session.save(tripPosition);
-            session.getTransaction().commit();        
-            session.close();
-            
-            /*
-            switch (vehicleParam) {
-                case "39": {
-                    try {
-                        locationData.add("1");
-                        System.out.println("[39] idem zrobic query");
-                        mapper.insertTableRow("location", locationData);
-                        break;
-                    } catch (SQLException ex) {
-                        Logger.getLogger(MainServletVajca.class.getName()).log(Level.SEVERE, null, ex);
-                    }
-                }
-                case "31": {
-                    try {
-                        locationData.add("2");
-                        System.out.println("[31] idem zrobic query");
-                        mapper.insertTableRow("location", locationData);
-                        break;
-                    } catch (SQLException ex) {
-                        Logger.getLogger(MainServletVajca.class.getName()).log(Level.SEVERE, null, ex);
-                    }
+                    poiJAB.add(poiJOB);
                 }
 
-            switch (request.getRequestURI()) {
-                case "/api/getStopsAndPoi":
-                    session = DatabaseConnector.getSession();
-                    List<Poi> poiList = session.createCriteria(Poi.class).list();
-                    session.getTransaction().commit();
-
-                    JsonArrayBuilder poiJAB = Json.createArrayBuilder();
-
-                    for (Poi poi : poiList) {
-                        JsonObjectBuilder poiJOB = Json.createObjectBuilder();
-                        poiJOB.add("title", poi.getTitle());
-                        poiJOB.add("lat", poi.getLat());
-                        poiJOB.add("lon", poi.getLon());
-                        poiJOB.add("radius", poi.getRadius());
-                        poiJOB.add("filePath", poi.getFilePath());
-
-                        poiJAB.add(poiJOB);
-                    }
-
-                    JsonObjectBuilder poisJOB = Json.createObjectBuilder();
-                    poisJOB.add("poiList", poiJAB);
-                    JsonObject poisJO = poisJOB.build();
-                    System.out.println(poisJO.toString());
-                    jw.writeObject(poisJO);
-                    break;
-            }
-
-            /*
-             switch (vehicleParam) {
-             case "39": {
-             try {
-             locationData.add("1");
-             System.out.println("[39] idem zrobic query");
-             mapper.insertTableRow("location", locationData);
-             break;
-             } catch (SQLException ex) {
-             Logger.getLogger(MainServletVajca.class.getName()).log(Level.SEVERE, null, ex);
-             }
-             }
-             case "31": {
-             try {
-             locationData.add("2");
-             System.out.println("[31] idem zrobic query");
-             mapper.insertTableRow("location", locationData);
-             break;
-             } catch (SQLException ex) {
-             Logger.getLogger(MainServletVajca.class.getName()).log(Level.SEVERE, null, ex);
-             }
-             }
-
-             }
-             */
+                
+                JsonObjectBuilder poisJOB = Json.createObjectBuilder();
+                poisJOB.add("poiList", poiJAB);
+                JsonObject poisJO = poisJOB.build();
+                System.out.println(poisJO.toString());
+                
+                
+                jw.writeObject(poisJO);
+                break;
         }
+        response.setStatus(HttpServletResponse.SC_OK);
     }
 
     @Override
