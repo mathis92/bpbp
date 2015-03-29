@@ -75,8 +75,17 @@ public class MainServletDevice extends HttpServlet {
         jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
         JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
         System.out.println("[req URI]: " + request.getRequestURI());
+        Map<String, String[]> parameterMap = request.getParameterMap();
+        System.out.println(parameterMap.toString());
+        switch (request.getParameter("requestContent")) {
+            case "CurrentStop": {
+                System.out.println("MAM TO TU");
+            }
+        }
+
         switch (request.getRequestURI()) {
-            case "/api/allStops": {
+
+            case "/deviceApi/allStops": {
 
                 logger.debug("in api call allStops " + request.getRequestURI() + " " + request.getRequestURL());
                 session = DatabaseConnector.getSession();
