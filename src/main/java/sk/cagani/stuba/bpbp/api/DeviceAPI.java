@@ -1,6 +1,7 @@
 package sk.cagani.stuba.bpbp.api;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.hibernate.Session;
+import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.Restrictions;
 import org.slf4j.LoggerFactory;
 import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
 import stuba.bpbphibernatemapper.GtfsStops;
@@ -42,16 +45,59 @@ public class DeviceAPI extends HttpServlet {
         jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
         JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
         System.out.println("[req URI]: " + request.getRequestURI());
-        switch (request.getRequestURI()) {
-            case "/api/allStops": {
+        System.out.println(request.getParameterMap().toString());
+        if (!request.getParameterMap().isEmpty()) {
+            switch (request.getParameter("requestContent")) {
+                case "CurrentStop": {
 
-                logger.debug("in api call allStops " + request.getRequestURI() + " " + request.getRequestURL());
+                    if (request.getParameter("stopName") != null) {
+                       session = DatabaseConnector.getSession();
+                       List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", request.getParameter("stopName"))).list();
+                        logger.debug(stopList.toString());
+                       
+                       session.getTransaction().commit();
+                       session.close();
+                        
+                        JsonObjectBuilder stopJOB = Json.createObjectBuilder();
+                        stopJOB.add("name", "FERKO");
 
+                        JsonObject stopsJO = stopJOB.build();
+                        System.out.println(stopsJO.toString());
+                        jw.writeObject(stopsJO);
+                    }
+                    break;
+                }
+                case "allStops": {
+                    logger.debug("in api call allStops " + request.getRequestURI() + " " + request.getRequestURL());
+                    session = DatabaseConnector.getSession();
+                    List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class).list();
+                    session.getTransaction().commit(); //closes transaction
+
+                    JsonArrayBuilder stopsJAB = Json.createArrayBuilder();
+                    for (GtfsStops stop : stopsList) {
+                        if (stop.getId().getId().endsWith("1")) {
+                            JsonObjectBuilder stopJOB = Json.createObjectBuilder();
+                            stopJOB.add(stop.getId().getClass().getSimpleName(), stop.getId().getId());
+                            stopJOB.add("name", stop.getName());
+                            stopJOB.add("lat", stop.getLat());
+                            stopJOB.add("lon", stop.getLon());
+                            stopsJAB.add(stopJOB);
+                        }
+                    }
+                    JsonObjectBuilder stopsJOB = Json.createObjectBuilder();
+                    stopsJOB.add("stops", stopsJAB);
+                    JsonObject stopsJO = stopsJOB.build();
+                    System.out.println(stopsJO.toString());
+                    jw.writeObject(stopsJO);
+                    break;
+                }
+
+                default: {
+                    response.getOutputStream().write(("invalid call " + request.getRequestURI()).getBytes());
+                }
             }
-
-            default: {
-                response.getOutputStream().write(("invalid call " + request.getRequestURI()).getBytes());
-            }
+        }else { 
+            response.getOutputStream().write(("invalid call EMPTY PARAM" + request.getRequestURI()).getBytes());
         }
         response.setStatus(HttpServletResponse.SC_OK);
 
@@ -65,6 +111,14 @@ public class DeviceAPI extends HttpServlet {
         jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
         JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
         System.out.println("[req URI]: " + request.getRequestURI());
+        Map<String, String[]> parameterMap = request.getParameterMap();
+        System.out.println(parameterMap.toString());
+        switch (request.getParameter("requestContent")) {
+            case "CurrentStop": {
+                System.out.println("MAM TO TU");
+            }
+        }
+
         switch (request.getRequestURI()) {
             case "/api/allStops": {
 
