@@ -7,6 +7,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
@@ -27,6 +28,7 @@ import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
 import stuba.bpbphibernatemapper.GtfsRoutes;
 import stuba.bpbphibernatemapper.GtfsStopTimes;
 import stuba.bpbphibernatemapper.GtfsStops;
+import stuba.bpbphibernatemapper.GtfsTrips;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -65,6 +67,7 @@ public class DeviceAPI extends HttpServlet {
                         c.set(Calendar.MINUTE, 0);
                         c.set(Calendar.SECOND, 0);
                         c.set(Calendar.MILLISECOND, 0);
+                        
                         System.out.println(c.getTimeInMillis());
                         Long timeSinceMidnight = new Date().getTime() - (c.getTimeInMillis() );
                         Long secondsSinceMidnight = timeSinceMidnight/1000;
@@ -73,9 +76,7 @@ public class DeviceAPI extends HttpServlet {
                         session = DatabaseConnector.getSession();
                         List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", request.getParameter("stopName"))).list();
                         for (GtfsStops stop : stopList){
-                            List<GtfsStopTimes> stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight.intValue(), secondsSinceMidnight.intValue()+1200)).list();
-                            System.out.println(stopTimesList.size() + " stop times list");
-                            for (GtfsStopTimes stopTime : stopTimesList) {
+                            for (GtfsStopTimes stopTime : (Set<GtfsStopTimes>)stop.getGtfsStopTimeses()) {
                                 GtfsRoutes route = stopTime.getGtfsTrips().getGtfsRoutes();
                                 RouteData routeData = new RouteData(route, stopTime, stopTime.getGtfsTrips());
                                 if (!routeList.contains(routeData)) {
@@ -83,6 +84,13 @@ public class DeviceAPI extends HttpServlet {
                                 }
                             }
                         }
+                        List<GtfsTrips> tripList = session.createCriteria(GtfsTrips.class).add(Restrictions.eq("shapeIdId", "Prac.dny_0")).list();
+                        for (GtfsTrips trip : tripList){
+                            for(GtfsStopTimes stopTime : (Set<GtfsStopTimes>)trip.getGtfsStopTimeses()){
+                                System.out.println(stopTime.getGtfsStops() + " zastafka - > prichod " + stopTime.getArrivalTime());
+                            }
+                        }                    
+                        
                         JsonArrayBuilder routesJAB = Json.createArrayBuilder();
                         for (RouteData route : routeList) {
                             JsonObjectBuilder routeJOB = Json.createObjectBuilder();

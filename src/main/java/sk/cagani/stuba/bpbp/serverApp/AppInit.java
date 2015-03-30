@@ -24,6 +24,9 @@ public class AppInit {
 
     public static void main(String[] args) throws Exception {
         DatabaseConnector dc = new DatabaseConnector();
+        dc.testConnection();
+        dc.testConnection();
+        dc.testConnection();
         new AppInit().startServlets();
     }
     

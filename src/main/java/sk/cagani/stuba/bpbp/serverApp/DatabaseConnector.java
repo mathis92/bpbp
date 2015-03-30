@@ -6,13 +6,18 @@
 package sk.cagani.stuba.bpbp.serverApp;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.criterion.Restrictions;
+import org.joda.time.DateTime;
+import org.joda.time.JodaTimePermission;
 
 import org.slf4j.LoggerFactory;
 import stuba.bpbphibernatemapper.GtfsRoutes;
@@ -26,9 +31,9 @@ import stuba.bpbphibernatemapper.GtfsTrips;
  */
 public class DatabaseConnector {
 
-    private final org.slf4j.Logger logger = LoggerFactory.getLogger(DatabaseConnector.class);        
-    private static  SessionFactory sessionFactory;
-  
+    private final org.slf4j.Logger logger = LoggerFactory.getLogger(DatabaseConnector.class);
+    private static SessionFactory sessionFactory;
+
     public DatabaseConnector() {
         Configuration configuration = new Configuration();
         configuration.configure("hibernate.cfg.xml");
@@ -36,44 +41,32 @@ public class DatabaseConnector {
         StandardServiceRegistryBuilder ssrb = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
         sessionFactory = configuration.buildSessionFactory(ssrb.build());
     }
-    
-    public static Session getSession(){
+
+    public static Session getSession() {
         Session session = sessionFactory.openSession();
         session.beginTransaction(); //open the transaction
         return session;
     }
-    
-    
-    
+
     public void testConnection() throws Exception {
-        Session session = DatabaseConnector.getSession();        
-        logger.debug("Test connection with the database created successfuly.");
-        Date date = new Date();
-        for (GtfsRoutes routes : (List<GtfsRoutes>) session.createCriteria(GtfsRoutes.class).list()) {
-            logger.debug(routes.getShortName());
-        }
-        logger.debug("MADARSKY CAS CIGANSKY DEVET " + (new Date().getTime() - date.getTime()));
+        System.out.println("IDEM TESTUVAC");
+        Session session = getSession();
+        List<GtfsTrips> tripList = session.createCriteria(GtfsTrips.class).add(Restrictions.eq("serviceIdId", "Prac.dny_0")).list();
 
-        
-        
-        Date startTime = new Date();
+        Date date1 = new Date();
+        for (GtfsTrips trip : tripList) {
+            // List<GtfsStopTimes> stopTimesList = (List<GtfsStopTimes>) session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsTrips", trip)).add(Restrictions.between("arrivalTime", 25000, 26200)).list();
+            Set<GtfsStopTimes> stopTimeesList = trip.getGtfsStopTimeses();
 
-        List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).list();
-        //MdsDiagnostician testDiagnostician = ((MdsTesting) session.createCriteria(MdsTesting.class).add(Restrictions.eq("mdsDevice", device)).list().get(0)).getMdsDiagnostician();
-
-        GtfsRoutes tricatdevina = (GtfsRoutes) session.createCriteria(GtfsRoutes.class).add(Restrictions.eq("shortName", "39")).list().get(0);
-
-        List<GtfsTrips> trips = (List<GtfsTrips>) session.createCriteria(GtfsTrips.class).add(Restrictions.eq("gtfsRoutes", tricatdevina)).list();
-        for (GtfsTrips trip : trips) {
-            System.out.println("trip " + trip.getTripHeadsign());
-            List<GtfsStopTimes> stopTimeList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsTrips", trip)).list();
-            System.out.println(stopTimeList.size() + " velkost stoptime array list");
-            for (GtfsStopTimes stopTime : stopTimeList) {
-                System.out.println(stopTime.getGtfsStops().getName() + " " + stopTime.getGtfsStops().getLat() + " " + stopTime.getGtfsStops().getLon() + " " + secsToHMS(stopTime.getArrivalTime()));
+            for (GtfsStopTimes stopTime : stopTimeesList) {
+                if (stopTime.getArrivalTime() > 25000 && stopTime.getArrivalTime() < 26200) {
+                    if (stopTime.getGtfsStops().getName().equalsIgnoreCase("Zochova")) {
+                        System.out.println("VOZIDLO ROZJEBANE cislo: " + trip.getGtfsRoutes().getShortName() + " sa prave dojebalo na zastafku -> " + stopTime.getGtfsStops().getName() + " KURVA KONECNE DOSLO O prichod " + secsToHMS(stopTime.getArrivalTime()));
+                    }
+                }
             }
-            break;
         }
-        System.out.println("Cas zrobenia nie text : " + (new Date().getTime() - startTime.getTime()));
+        System.out.println((new Date().getTime() - date1.getTime()));
 
     }
 
