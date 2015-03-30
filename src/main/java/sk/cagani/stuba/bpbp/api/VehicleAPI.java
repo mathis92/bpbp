@@ -5,6 +5,7 @@ import java.io.StringReader;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.json.Json;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
@@ -15,6 +16,7 @@ import javax.json.stream.JsonGenerator;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.criterion.Restrictions;
 import org.slf4j.LoggerFactory;
@@ -25,6 +27,7 @@ import stuba.bpbphibernatemapper.GtfsStops;
 import stuba.bpbphibernatemapper.GtfsTrips;
 import stuba.bpbphibernatemapper.GtfsTripsId;
 import stuba.bpbphibernatemapper.Poi;
+import stuba.bpbphibernatemapper.PoisInRoutes;
 import stuba.bpbphibernatemapper.TripPositions;
 
 /*
@@ -42,11 +45,10 @@ public class VehicleAPI extends HttpServlet {
 
     private Session session;
 
-    private String agencyId = null;
+    private String agencyId;
 
     public VehicleAPI() {
-        agencyId = DatabaseConnector.getSession().createCriteria(GtfsAgencies.class).list().get(0).toString();
-        System.out.println("agency: " + agencyId);
+        agencyId = ((GtfsAgencies) DatabaseConnector.getSession().createCriteria(GtfsAgencies.class).list().get(0)).getId();        
     }
 
     @Override
@@ -63,42 +65,58 @@ public class VehicleAPI extends HttpServlet {
                 session.close();
                 //v buducnosti tu zrob to cekovanie pred zastavkou a potom ak hej, tak treba tie linky najblizsie poslat abo co
                 break;
-            case "/api/vehicle/getStopsAndPoi":
-                response.setContentType("text/json;charset=utf-8");
+            case "/api/vehicle/getStopsAndPoi":                
+                System.out.println("tripId: " + request.getParameter("gtfs_trip_id"));
+                
+                response.setContentType("text/json");
                 Map<String, Boolean> jwConfig = new HashMap<>();
                 jwConfig.put(JsonGenerator.PRETTY_PRINTING, Boolean.TRUE);
                 JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
 
-                session = DatabaseConnector.getSession();
-                List<Poi> poiList = session.createCriteria(Poi.class).list();                               
-                List<GtfsStopTimes> stopTimeList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.like("trip_id", request.getParameter("gtfs_trip_id"))).list();
+                session = DatabaseConnector.getSession(); 
                 
-                //JsonArrayBuilder stopsJAB = Json.createArrayBuilder();
+                /*
+                get all POI
+                */
+                GtfsTrips gtfsTrip = (GtfsTrips) session.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id")));
                 
-                for (GtfsStopTimes stopTime : stopTimeList) {
-                    //JsonObjectBuilder stopJOB = Json.createObjectBuilder();
-                    System.out.println("zastafka: " + stopTime.getGtfsStops().getName() + "  cas: " + stopTime.getArrivalTime());                                  
-                }               
-                session.getTransaction().commit();
-                session.close();
-
                 JsonArrayBuilder poiJAB = Json.createArrayBuilder();
-
-                for (Poi poi : poiList) {
+                for (PoisInRoutes pir : (Set<PoisInRoutes>) gtfsTrip.getGtfsRoutes().getPoisInRouteses()) {                                    
                     JsonObjectBuilder poiJOB = Json.createObjectBuilder();
-                    poiJOB.add("title", poi.getTitle());
-                    poiJOB.add("lat", poi.getLat());
-                    poiJOB.add("lon", poi.getLon());
-                    poiJOB.add("radius", poi.getRadius());
-                    poiJOB.add("filePath", poi.getFilePath());
+                    poiJOB.add("title", pir.getPoi().getTitle());
+                    poiJOB.add("lat", pir.getPoi().getLat());
+                    poiJOB.add("lon", pir.getPoi().getLon());
+                    poiJOB.add("radius", pir.getPoi().getRadius());
+                    poiJOB.add("filePath", pir.getPoi().getFilePath());
 
                     poiJAB.add(poiJOB);
                 }
-
+                /*
+                get all stops
+                */
+                JsonArrayBuilder stopsJAB = Json.createArrayBuilder();
+                for (GtfsStopTimes gst : (Set<GtfsStopTimes>) gtfsTrip.getGtfsStopTimeses()) {
+                    JsonObjectBuilder stopsJOB = Json.createObjectBuilder();
+                    stopsJOB.add("name", gst.getGtfsStops().getName());
+                    stopsJOB.add("lat", gst.getGtfsStops().getLat());
+                    stopsJOB.add("lon", gst.getGtfsStops().getLon());
+                    stopsJOB.add("zoneId", gst.getGtfsStops().getZoneId());
+                    stopsJOB.add("arrivalTime", gst.getArrivalTime());
+                    stopsJOB.add("isOnRequest", gst.getPickupType().equals(3) ? "true" : "false");
+                    stopsJOB.add("stopSequence", gst.getStopSequence());
+                    
+                    stopsJAB.add(stopsJOB);
+                }
                 
-                JsonObjectBuilder poisJOB = Json.createObjectBuilder();
-                poisJOB.add("poiList", poiJAB);
-                JsonObject poisJO = poisJOB.build();
+                session.getTransaction().commit();
+                session.close();                                                                  
+                
+                JsonObjectBuilder tripInfoJOB = Json.createObjectBuilder();
+                tripInfoJOB.add("poiList", poiJAB);
+                tripInfoJOB.add("stopsList", stopsJAB);
+                
+                JsonObject poisJO = tripInfoJOB.build();
+                
                 System.out.println(poisJO.toString());
                 
                 
