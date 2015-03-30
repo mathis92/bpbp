@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.json.Json;
+import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
@@ -19,6 +20,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.hibernate.Session;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
+import org.json.simple.JSONArray;
 import org.slf4j.LoggerFactory;
 import sk.cagani.stuba.bpbp.device.RouteData;
 import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
@@ -75,7 +77,7 @@ public class DeviceAPI extends HttpServlet {
                             System.out.println(stopTimesList.size() + " stop times list");
                             for (GtfsStopTimes stopTime : stopTimesList) {
                                 GtfsRoutes route = stopTime.getGtfsTrips().getGtfsRoutes();
-                                RouteData routeData = new RouteData(route, stopTime);
+                                RouteData routeData = new RouteData(route, stopTime, stopTime.getGtfsTrips());
                                 if (!routeList.contains(routeData)) {
                                     routeList.add(routeData);
                                 }
@@ -85,14 +87,15 @@ public class DeviceAPI extends HttpServlet {
                         for (RouteData route : routeList) {
                             JsonObjectBuilder routeJOB = Json.createObjectBuilder();
                             routeJOB.add("name", route.getRoute().getShortName());
-                            routeJOB.add("stopHeadSign", route.getStopTime().getStopHeadsign());
+                            routeJOB.add("stopHeadSign", route.getGtfsTrip().getTripHeadsign());
                             routeJOB.add("arrivalTime", route.getStopTime().getArrivalTime());
                             routesJAB.add(routeJOB);
                         }
                         session.getTransaction().commit();
                         session.close();
-                        System.out.println(routesJAB.build().toString());
-                        jw.writeArray(routesJAB.build());
+                        JsonArray routesJA = routesJAB.build();
+                        System.out.println(routesJA.toString());
+                        jw.writeArray(routesJA);
                     }
                     break;
                 }

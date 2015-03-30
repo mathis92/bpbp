@@ -8,6 +8,7 @@ package sk.cagani.stuba.bpbp.device;
 import java.util.Objects;
 import stuba.bpbphibernatemapper.GtfsRoutes;
 import stuba.bpbphibernatemapper.GtfsStopTimes;
+import stuba.bpbphibernatemapper.GtfsTrips;
 
 /**
  *
@@ -17,11 +18,13 @@ public class RouteData {
 
     private final GtfsRoutes route;
     private final GtfsStopTimes stopTime;
+    private final GtfsTrips gtfsTrip;
     
 
-    public RouteData(GtfsRoutes route, GtfsStopTimes stopTime) {
+    public RouteData(GtfsRoutes route, GtfsStopTimes stopTime, GtfsTrips gtfsTrips) {
         this.route = route;
         this.stopTime = stopTime;
+        this.gtfsTrip = gtfsTrips;
     }
 
     public GtfsRoutes getRoute() {
@@ -30,6 +33,10 @@ public class RouteData {
 
     public GtfsStopTimes getStopTime() {
         return stopTime;
+    }
+
+    public GtfsTrips getGtfsTrip() {
+        return gtfsTrip;
     }
 
  
