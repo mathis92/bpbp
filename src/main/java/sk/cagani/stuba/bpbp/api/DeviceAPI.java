@@ -20,6 +20,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.hibernate.Session;
 import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 import org.json.simple.JSONArray;
 import org.slf4j.LoggerFactory;
@@ -67,36 +68,34 @@ public class DeviceAPI extends HttpServlet {
                         c.set(Calendar.MINUTE, 0);
                         c.set(Calendar.SECOND, 0);
                         c.set(Calendar.MILLISECOND, 0);
-                        
+
                         System.out.println(c.getTimeInMillis());
-                        Long timeSinceMidnight = new Date().getTime() - (c.getTimeInMillis() );
-                        Long secondsSinceMidnight = timeSinceMidnight/1000;
+                        Long timeSinceMidnight = new Date().getTime() - (c.getTimeInMillis());
+                        Long secondsSinceMidnight = timeSinceMidnight / 1000;
                         System.out.println(secondsSinceMidnight.intValue() + " since midnight ");
 
                         session = DatabaseConnector.getSession();
                         List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", request.getParameter("stopName"))).list();
-                        for (GtfsStops stop : stopList){
-                            for (GtfsStopTimes stopTime : (Set<GtfsStopTimes>)stop.getGtfsStopTimeses()) {
-                                GtfsRoutes route = stopTime.getGtfsTrips().getGtfsRoutes();
-                                RouteData routeData = new RouteData(route, stopTime, stopTime.getGtfsTrips());
-                                if (!routeList.contains(routeData)) {
-                                    routeList.add(routeData);
+                        for (GtfsStops stop : stopList) {
+                            List<GtfsStopTimes> stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight.intValue(), secondsSinceMidnight.intValue() + 1200)).addOrder(Order.asc("arrivalTime")).list();
+                            for (GtfsStopTimes stopTimes : stopTimesList) {
+                                if (stopTimes.getGtfsTrips().getServiceIdId().equals("Prac.dny_0")) {
+                                    System.out.println(stopTimes.getGtfsTrips().getGtfsRoutes().getShortName() + " " + stop.getName() + " " + stopTimes.getGtfsTrips().getTripHeadsign() + " " + secsToHMS(stopTimes.getArrivalTime()));
+                                    RouteData routeData = new RouteData(stopTimes.getGtfsTrips().getGtfsRoutes(), stopTimes, stopTimes.getGtfsTrips());
+                                    if (!routeList.contains(routeData)) {
+                                        routeList.add(routeData);
+                                    }
                                 }
                             }
                         }
-                        List<GtfsTrips> tripList = session.createCriteria(GtfsTrips.class).add(Restrictions.eq("shapeIdId", "Prac.dny_0")).list();
-                        for (GtfsTrips trip : tripList){
-                            for(GtfsStopTimes stopTime : (Set<GtfsStopTimes>)trip.getGtfsStopTimeses()){
-                                System.out.println(stopTime.getGtfsStops() + " zastafka - > prichod " + stopTime.getArrivalTime());
-                            }
-                        }                    
-                        
+
                         JsonArrayBuilder routesJAB = Json.createArrayBuilder();
                         for (RouteData route : routeList) {
                             JsonObjectBuilder routeJOB = Json.createObjectBuilder();
-                            routeJOB.add("name", route.getRoute().getShortName());
+                            routeJOB.add("routeId", route.getRoute().getShortName());
                             routeJOB.add("stopHeadSign", route.getGtfsTrip().getTripHeadsign());
-                            routeJOB.add("arrivalTime", route.getStopTime().getArrivalTime());
+                            routeJOB.add("routeType", route.getRoute().getType());
+                            routeJOB.add("arrivalTime", secsToHMS(route.getStopTime().getArrivalTime()));
                             routesJAB.add(routeJOB);
                         }
                         session.getTransaction().commit();
@@ -190,5 +189,13 @@ public class DeviceAPI extends HttpServlet {
             }
         }
         response.setStatus(HttpServletResponse.SC_OK);
+    }
+
+    public String secsToHMS(int totalSecs) {
+        int hours = totalSecs / 3600;
+        int minutes = (totalSecs % 3600) / 60;
+        int seconds = totalSecs % 60;
+
+        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
     }
 }

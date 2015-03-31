@@ -15,6 +15,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
+import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 import org.joda.time.DateTime;
 import org.joda.time.JodaTimePermission;
@@ -51,18 +52,38 @@ public class DatabaseConnector {
     public void testConnection() throws Exception {
         System.out.println("IDEM TESTUVAC");
         Session session = getSession();
-        List<GtfsTrips> tripList = session.createCriteria(GtfsTrips.class).add(Restrictions.eq("serviceIdId", "Prac.dny_0")).list();
+        Calendar c = Calendar.getInstance();
+        c.setTime(new Date());
+        c.set(Calendar.HOUR_OF_DAY, 0);
+        c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
 
+        System.out.println(c.getTimeInMillis());
+        Long timeSinceMidnight = new Date().getTime() - (c.getTimeInMillis());
+        Long secondsSinceMidnight = timeSinceMidnight / 1000;
+        System.out.println(secondsSinceMidnight.intValue() + " since midnight ");
         Date date1 = new Date();
-        for (GtfsTrips trip : tripList) {
-            // List<GtfsStopTimes> stopTimesList = (List<GtfsStopTimes>) session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsTrips", trip)).add(Restrictions.between("arrivalTime", 25000, 26200)).list();
-            Set<GtfsStopTimes> stopTimeesList = trip.getGtfsStopTimeses();
+        /*
+         List<GtfsTrips> tripList = session.createCriteria(GtfsTrips.class).add(Restrictions.eq("serviceIdId", "Prac.dny_0")).list();
+         System.out.println("pocet tripov pre prac dny " + tripList.size());
 
-            for (GtfsStopTimes stopTime : stopTimeesList) {
-                if (stopTime.getArrivalTime() > 25000 && stopTime.getArrivalTime() < 26200) {
-                    if (stopTime.getGtfsStops().getName().equalsIgnoreCase("Zochova")) {
-                        System.out.println("VOZIDLO ROZJEBANE cislo: " + trip.getGtfsRoutes().getShortName() + " sa prave dojebalo na zastafku -> " + stopTime.getGtfsStops().getName() + " KURVA KONECNE DOSLO O prichod " + secsToHMS(stopTime.getArrivalTime()));
-                    }
+         for (GtfsTrips trip : tripList) {
+         List<GtfsStopTimes> stopTimesList = (List<GtfsStopTimes>) session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsTrips", trip)).add(Restrictions.between("arrivalTime", secondsSinceMidnight, secondsSinceMidnight + 1200)).list();
+         for (GtfsStopTimes stopTime : stopTimesList) {
+         //for (GtfsStops stop : (List<GtfsStops>) session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", "Zochova")).list()) {
+         if (stopTime.getGtfsStops().getName().equalsIgnoreCase("Zochova")) {
+         System.out.println("VOZIDLO ROZJEBANE cislo: " + trip.getGtfsRoutes().getShortName() + " sa prave dojebalo na zastafku -> " + stopTime.getGtfsStops().getName() + " KURVA KONECNE DOSLO O prichod " + secsToHMS(stopTime.getArrivalTime()));
+         }
+         }
+         }
+         */
+        List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", "Zochova")).list();
+        for (GtfsStops stop : stopList) {
+            List<GtfsStopTimes> stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight.intValue(), secondsSinceMidnight.intValue() + 1200)).addOrder(Order.asc("arrivalTime")).list();
+            for (GtfsStopTimes stopTimes : stopTimesList) {
+                if (stopTimes.getGtfsTrips().getServiceIdId().equals("Prac.dny_0")) {
+                    System.out.println(stopTimes.getGtfsTrips().getGtfsRoutes().getShortName() + " " + stop.getName() + " "+ stopTimes.getGtfsTrips().getTripHeadsign() + " " + secsToHMS(stopTimes.getArrivalTime()));
                 }
             }
         }

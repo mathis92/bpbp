@@ -27,6 +27,9 @@ public class AppInit {
         dc.testConnection();
         dc.testConnection();
         dc.testConnection();
+        dc.testConnection();
+        dc.testConnection();
+        dc.testConnection();
         new AppInit().startServlets();
     }
     
