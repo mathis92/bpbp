@@ -5,26 +5,27 @@
  */
 package sk.cagani.stuba.bpbp.serverApp;
 
+import java.io.BufferedReader;
 import java.io.File;
-import java.util.ArrayList;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.Set;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
-import org.joda.time.DateTime;
-import org.joda.time.JodaTimePermission;
 
 import org.slf4j.LoggerFactory;
-import stuba.bpbphibernatemapper.GtfsRoutes;
 import stuba.bpbphibernatemapper.GtfsStopTimes;
 import stuba.bpbphibernatemapper.GtfsStops;
-import stuba.bpbphibernatemapper.GtfsTrips;
+import stuba.bpbphibernatemapper.GtfsStopsId;
 
 /**
  *
@@ -41,12 +42,56 @@ public class DatabaseConnector {
         configuration.addJar(new File("/home/debian/BPbp/target/lib/BpbpHibernateMapper-1.0.jar"));
         StandardServiceRegistryBuilder ssrb = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
         sessionFactory = configuration.buildSessionFactory(ssrb.build());
+        
+        zrob();
+        System.out.println("HOTOVO DO PICE");
     }
 
     public static Session getSession() {
         Session session = sessionFactory.openSession();
         session.beginTransaction(); //open the transaction
         return session;
+    }
+
+    private void zrob() {
+        System.out.println("robim");
+        String csvFile = "/home/debian/stopscustom.txt";
+        BufferedReader br = null;
+        String line = "";
+        String cvsSplitBy = ",";
+
+        Session session = getSession();
+        try {
+            FileInputStream fis = new FileInputStream(csvFile);
+            System.out.println("otwaram");
+            br = new BufferedReader(new InputStreamReader(fis, "UTF-8"));
+            System.out.println("scitam");
+            while ((line = br.readLine()) != null) {
+                // use comma as separator
+                String[] stop = line.split(cvsSplitBy);
+                System.out.println(line + " " + stop.length);
+                
+                System.out.println(stop[0] + " - " + stop[1]);
+                GtfsStops stp = (GtfsStops) session.get(GtfsStops.class, new GtfsStopsId("01", stop[0]));
+                stp.setName(stop[1]);
+                session.update(stp);
+            }
+            session.getTransaction().commit();
+            session.close();
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (br != null) {
+                try {
+                    br.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     public void testConnection() throws Exception {
@@ -83,7 +128,7 @@ public class DatabaseConnector {
             List<GtfsStopTimes> stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight.intValue(), secondsSinceMidnight.intValue() + 1200)).addOrder(Order.asc("arrivalTime")).list();
             for (GtfsStopTimes stopTimes : stopTimesList) {
                 if (stopTimes.getGtfsTrips().getServiceIdId().equals("Prac.dny_0")) {
-                    System.out.println(stopTimes.getGtfsTrips().getGtfsRoutes().getShortName() + " " + stop.getName() + " "+ stopTimes.getGtfsTrips().getTripHeadsign() + " " + secsToHMS(stopTimes.getArrivalTime()));
+                    System.out.println(stopTimes.getGtfsTrips().getGtfsRoutes().getShortName() + " " + stop.getName() + " " + stopTimes.getGtfsTrips().getTripHeadsign() + " " + secsToHMS(stopTimes.getArrivalTime()));
                 }
             }
         }

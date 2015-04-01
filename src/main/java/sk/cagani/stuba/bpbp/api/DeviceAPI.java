@@ -62,18 +62,8 @@ public class DeviceAPI extends HttpServlet {
                 case "CurrentStop": {
                     if (request.getParameter("stopName") != null) {
                         List<RouteData> routeList = new ArrayList<>();
-                        Calendar c = Calendar.getInstance();
-                        c.setTime(new Date());
-                        c.set(Calendar.HOUR_OF_DAY, 0);
-                        c.set(Calendar.MINUTE, 0);
-                        c.set(Calendar.SECOND, 0);
-                        c.set(Calendar.MILLISECOND, 0);
-
-                        System.out.println(c.getTimeInMillis());
-                        Long timeSinceMidnight = new Date().getTime() - (c.getTimeInMillis());
-                        Long secondsSinceMidnight = timeSinceMidnight / 1000;
-                        System.out.println(secondsSinceMidnight.intValue() + " since midnight ");
-
+                        Long secondsSinceMidnight = getSecsSinceMidnight();
+                        
                         session = DatabaseConnector.getSession();
                         List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", request.getParameter("stopName"))).list();
                         for (GtfsStops stop : stopList) {
@@ -197,5 +187,19 @@ public class DeviceAPI extends HttpServlet {
         int seconds = totalSecs % 60;
 
         return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+    }
+
+    public static long getSecsSinceMidnight() {
+        Calendar c = Calendar.getInstance();
+        c.setTime(new Date());
+        c.set(Calendar.HOUR_OF_DAY, 0);
+        c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+
+        System.out.println(c.getTimeInMillis());
+        long timeSinceMidnight = new Date().getTime() - (c.getTimeInMillis());
+
+        return timeSinceMidnight / 1000;
     }
 }

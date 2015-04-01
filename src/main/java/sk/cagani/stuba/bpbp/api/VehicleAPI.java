@@ -1,7 +1,9 @@
 package sk.cagani.stuba.bpbp.api;
 
 import java.io.IOException;
-import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,16 +12,16 @@ import javax.json.Json;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
-import javax.json.JsonReader;
 import javax.json.JsonWriter;
 import javax.json.stream.JsonGenerator;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.hibernate.Criteria;
 import org.hibernate.Session;
+import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 import org.slf4j.LoggerFactory;
+import sk.cagani.stuba.bpbp.device.RouteData;
 import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
 import stuba.bpbphibernatemapper.GtfsAgencies;
 import stuba.bpbphibernatemapper.GtfsStopTimes;
@@ -48,7 +50,7 @@ public class VehicleAPI extends HttpServlet {
     private String agencyId;
 
     public VehicleAPI() {
-        agencyId = ((GtfsAgencies) DatabaseConnector.getSession().createCriteria(GtfsAgencies.class).list().get(0)).getId();        
+        agencyId = ((GtfsAgencies) DatabaseConnector.getSession().createCriteria(GtfsAgencies.class).list().get(0)).getId();
     }
 
     @Override
@@ -56,6 +58,26 @@ public class VehicleAPI extends HttpServlet {
         System.out.println("[POST]");
 
         switch (request.getRequestURI()) {
+            case "/api/vehicle/init":
+                Long secondsSinceMidnight = DeviceAPI.getSecsSinceMidnight();
+                
+                session = DatabaseConnector.getSession();
+                        List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", request.getParameter("stopName"))).list();
+                        for (GtfsStops stop : stopList) {
+                            List<GtfsStopTimes> stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight.intValue(), secondsSinceMidnight.intValue() + 1200)).addOrder(Order.asc("arrivalTime")).list();
+                            for (GtfsStopTimes stopTimes : stopTimesList) {
+                                if (stopTimes.getGtfsTrips().getServiceIdId().equals("Prac.dny_0")) {
+                                    //System.out.println(stopTimes.getGtfsTrips().getGtfsRoutes().getShortName() + " " + stop.getName() + " " + stopTimes.getGtfsTrips().getTripHeadsign() + " " + secsToHMS(stopTimes.getArrivalTime()));
+                                    RouteData routeData = new RouteData(stopTimes.getGtfsTrips().getGtfsRoutes(), stopTimes, stopTimes.getGtfsTrips());
+                                    /*
+                                    if (!routeList.contains(routeData)) {
+                                        routeList.add(routeData);
+                                    }*/
+                                }
+                            }
+                        }
+                
+                break;
             case "/api/vehicle/updateLocation":
                 TripPositions tripPosition = new TripPositions(new GtfsTrips(new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id"))), Float.parseFloat(request.getParameter("lat")), Float.parseFloat(request.getParameter("lon")), 0, Float.parseFloat(request.getParameter("spd")), Float.parseFloat(request.getParameter("acc")));
 
@@ -65,23 +87,30 @@ public class VehicleAPI extends HttpServlet {
                 session.close();
                 //v buducnosti tu zrob to cekovanie pred zastavkou a potom ak hej, tak treba tie linky najblizsie poslat abo co
                 break;
-            case "/api/vehicle/getStopsAndPoi":                
+            case "/api/vehicle/getStopsAndPoi":
                 System.out.println("tripId: " + request.getParameter("gtfs_trip_id"));
-                
+
                 response.setContentType("text/json");
                 Map<String, Boolean> jwConfig = new HashMap<>();
                 jwConfig.put(JsonGenerator.PRETTY_PRINTING, Boolean.TRUE);
                 JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
 
-                session = DatabaseConnector.getSession(); 
-                
+                session = DatabaseConnector.getSession();
+
                 /*
-                get all POI
-                */
+                 get all POI
+                 */
                 GtfsTrips gtfsTrip = (GtfsTrips) session.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id")));
-                
+
+                List<PoisInRoutes> poisInRoutesList = new ArrayList<>((Set<PoisInRoutes>) gtfsTrip.getGtfsRoutes().getPoisInRouteses());
+                Collections.sort(poisInRoutesList, new Comparator<PoisInRoutes>() {
+                    @Override
+                    public int compare(PoisInRoutes p1, PoisInRoutes p2) {
+                        return p1.getId().compareTo(p2.getId());
+                    }
+                });
                 JsonArrayBuilder poiJAB = Json.createArrayBuilder();
-                for (PoisInRoutes pir : (Set<PoisInRoutes>) gtfsTrip.getGtfsRoutes().getPoisInRouteses()) {                                    
+                for (PoisInRoutes pir : poisInRoutesList) {
                     JsonObjectBuilder poiJOB = Json.createObjectBuilder();
                     poiJOB.add("title", pir.getPoi().getTitle());
                     poiJOB.add("lat", pir.getPoi().getLat());
@@ -92,10 +121,17 @@ public class VehicleAPI extends HttpServlet {
                     poiJAB.add(poiJOB);
                 }
                 /*
-                get all stops
-                */
+                 get all stops
+                 */
+                List<GtfsStopTimes> gtfsStopTimesList = new ArrayList<>((Set<GtfsStopTimes>) gtfsTrip.getGtfsStopTimeses());
+                Collections.sort(gtfsStopTimesList, new Comparator<GtfsStopTimes>() {
+                    @Override
+                    public int compare(GtfsStopTimes p1, GtfsStopTimes p2) {
+                        return p1.getStopSequence().compareTo(p2.getStopSequence());
+                    }
+                });
                 JsonArrayBuilder stopsJAB = Json.createArrayBuilder();
-                for (GtfsStopTimes gst : (Set<GtfsStopTimes>) gtfsTrip.getGtfsStopTimeses()) {
+                for (GtfsStopTimes gst : gtfsStopTimesList) {
                     JsonObjectBuilder stopsJOB = Json.createObjectBuilder();
                     stopsJOB.add("name", gst.getGtfsStops().getName());
                     stopsJOB.add("lat", gst.getGtfsStops().getLat());
@@ -104,22 +140,21 @@ public class VehicleAPI extends HttpServlet {
                     stopsJOB.add("arrivalTime", gst.getArrivalTime());
                     stopsJOB.add("isOnRequest", gst.getPickupType().equals(3) ? "true" : "false");
                     stopsJOB.add("stopSequence", gst.getStopSequence());
-                    
+
                     stopsJAB.add(stopsJOB);
                 }
-                
+
                 session.getTransaction().commit();
-                session.close();                                                                  
-                
+                session.close();
+
                 JsonObjectBuilder tripInfoJOB = Json.createObjectBuilder();
                 tripInfoJOB.add("poiList", poiJAB);
                 tripInfoJOB.add("stopsList", stopsJAB);
-                
+
                 JsonObject poisJO = tripInfoJOB.build();
-                
+
                 System.out.println(poisJO.toString());
-                
-                
+
                 jw.writeObject(poisJO);
                 break;
         }
@@ -227,4 +262,5 @@ public class VehicleAPI extends HttpServlet {
         }
         response.setStatus(HttpServletResponse.SC_OK);
     }
+    
 }
