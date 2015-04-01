@@ -6,11 +6,25 @@
 package sk.cagani.stuba.bpbp.serverApp;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.json.Json;
+import javax.json.JsonArrayBuilder;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
+import javax.json.JsonWriter;
+import javax.json.stream.JsonGenerator;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
@@ -49,6 +63,48 @@ public class DatabaseConnector {
         return session;
     }
 
+    public void writeStopsToFile(){
+        FileOutputStream fos = null;
+        try {
+            Map<String, Object> jwConfig = new HashMap<>();
+            jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
+            fos = new FileOutputStream("/home/debian/allStops.txt");
+            JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(fos,Charset.forName("UTF-8"));
+            Session session = DatabaseConnector.getSession();
+            List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class).list();
+            session.getTransaction().commit(); //closes transaction
+            session.close();
+            JsonArrayBuilder stopsJAB = Json.createArrayBuilder();
+            for (GtfsStops stop : stopsList) {
+                if (stop.getId().getId().endsWith("1")) {
+                    JsonObjectBuilder stopJOB = Json.createObjectBuilder();
+                    stopJOB.add(stop.getId().getClass().getSimpleName(), stop.getId().getId());
+                    stopJOB.add("name", stop.getName());
+                    stopJOB.add("lat", stop.getLat());
+                    stopJOB.add("lon", stop.getLon());
+                    stopsJAB.add(stopJOB);
+                }
+            }
+            JsonObjectBuilder stopsJOB = Json.createObjectBuilder();
+            stopsJOB.add("stops", stopsJAB);
+            JsonObject stopsJO = stopsJOB.build();
+            System.out.println(stopsJO.toString());
+            jw.writeObject(stopsJO);
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(DatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            try {
+                fos.close();
+            } catch (IOException ex) {
+                Logger.getLogger(DatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+                    
+                   
+                    
+    }
+    
+    
     public void testConnection() throws Exception {
         System.out.println("IDEM TESTUVAC");
         Session session = getSession();

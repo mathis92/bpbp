@@ -9,6 +9,7 @@ import java.util.Objects;
 import stuba.bpbphibernatemapper.GtfsRoutes;
 import stuba.bpbphibernatemapper.GtfsStopTimes;
 import stuba.bpbphibernatemapper.GtfsTrips;
+import stuba.bpbphibernatemapper.TripPositions;
 
 /**
  *
@@ -19,12 +20,13 @@ public class RouteData {
     private final GtfsRoutes route;
     private final GtfsStopTimes stopTime;
     private final GtfsTrips gtfsTrip;
-    
+    private final TripPositions tripPositions;
 
-    public RouteData(GtfsRoutes route, GtfsStopTimes stopTime, GtfsTrips gtfsTrips) {
-        this.route = route;
-        this.stopTime = stopTime;
+    public RouteData(GtfsRoutes gtfsRoutes, GtfsStopTimes stopTimes, GtfsTrips gtfsTrips, TripPositions tripPositions) {
+        this.route = gtfsRoutes;
+        this.stopTime = stopTimes;
         this.gtfsTrip = gtfsTrips;
+        this.tripPositions = tripPositions;
     }
 
     public GtfsRoutes getRoute() {
@@ -39,7 +41,10 @@ public class RouteData {
         return gtfsTrip;
     }
 
- 
+    public TripPositions getTripPositions() {
+        return tripPositions;
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj == null) {
@@ -66,6 +71,4 @@ public class RouteData {
         return hash;
     }
 
- 
-    
 }

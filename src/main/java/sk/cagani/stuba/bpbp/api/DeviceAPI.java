@@ -1,7 +1,14 @@
 package sk.cagani.stuba.bpbp.api;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.math.BigDecimal;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -30,6 +37,7 @@ import stuba.bpbphibernatemapper.GtfsRoutes;
 import stuba.bpbphibernatemapper.GtfsStopTimes;
 import stuba.bpbphibernatemapper.GtfsStops;
 import stuba.bpbphibernatemapper.GtfsTrips;
+import stuba.bpbphibernatemapper.TripPositions;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -49,11 +57,11 @@ public class DeviceAPI extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         System.out.println("[POST]");
-        response.setContentType("text/html;charset=utf-8");
+        response.setContentType("text/html; charset=UTF-8");
         response.setContentType("text/json");
         Map<String, Object> jwConfig = new HashMap<>();
         jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
-        JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
+        JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream(), Charset.forName("UTF-8"));
         System.out.println("[req URI]: " + request.getRequestURI());
         System.out.println(request.getParameterMap().toString());
 
@@ -61,6 +69,11 @@ public class DeviceAPI extends HttpServlet {
             switch (request.getParameter("requestContent")) {
                 case "CurrentStop": {
                     if (request.getParameter("stopName") != null) {
+                        String requestStopName = request.getParameter("stopName");
+                        Charset.forName("UTF-8").encode(requestStopName);
+                        byte[] data = org.apache.commons.codec.binary.Base64.decodeBase64(requestStopName);
+                        String stopName = new String(data, "UTF-8");
+
                         List<RouteData> routeList = new ArrayList<>();
                         Calendar c = Calendar.getInstance();
                         c.setTime(new Date());
@@ -75,13 +88,24 @@ public class DeviceAPI extends HttpServlet {
                         System.out.println(secondsSinceMidnight.intValue() + " since midnight ");
 
                         session = DatabaseConnector.getSession();
-                        List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", request.getParameter("stopName"))).list();
+                        List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", stopName)).list();
                         for (GtfsStops stop : stopList) {
                             List<GtfsStopTimes> stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight.intValue(), secondsSinceMidnight.intValue() + 1200)).addOrder(Order.asc("arrivalTime")).list();
                             for (GtfsStopTimes stopTimes : stopTimesList) {
                                 if (stopTimes.getGtfsTrips().getServiceIdId().equals("Prac.dny_0")) {
-                                    System.out.println(stopTimes.getGtfsTrips().getGtfsRoutes().getShortName() + " " + stop.getName() + " " + stopTimes.getGtfsTrips().getTripHeadsign() + " " + secsToHMS(stopTimes.getArrivalTime()));
-                                    RouteData routeData = new RouteData(stopTimes.getGtfsTrips().getGtfsRoutes(), stopTimes, stopTimes.getGtfsTrips());
+                                    List<TripPositions> tripPositionList = session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", stopTimes.getGtfsTrips())).addOrder(Order.desc("id")).list();
+                                    TripPositions lastPosition;
+                                    if (!tripPositionList.isEmpty()) {
+                                        lastPosition = tripPositionList.get(0);
+                                    } else {
+                                        lastPosition = null;
+                                    }
+                                    Integer delay = 0;
+                                    if (lastPosition != null) {
+                                        delay = lastPosition.getDelay();
+                                    }
+                                    System.out.println(stopTimes.getGtfsTrips().getGtfsRoutes().getShortName() + " " + stop.getName() + " " + stopTimes.getGtfsTrips().getTripHeadsign() + " " + secsToHMS(stopTimes.getArrivalTime()) + " DELAY " + delay + " secs ");
+                                    RouteData routeData = new RouteData(stopTimes.getGtfsTrips().getGtfsRoutes(), stopTimes, stopTimes.getGtfsTrips(), lastPosition);
                                     if (!routeList.contains(routeData)) {
                                         routeList.add(routeData);
                                     }
@@ -95,6 +119,11 @@ public class DeviceAPI extends HttpServlet {
                             routeJOB.add("routeId", route.getRoute().getShortName());
                             routeJOB.add("stopHeadSign", route.getGtfsTrip().getTripHeadsign());
                             routeJOB.add("routeType", route.getRoute().getType());
+                            if (route.getTripPositions() != null) {
+                                routeJOB.add("delay", route.getTripPositions().getDelay());
+                            } else {
+                                routeJOB.add("delay", "0");
+                            }
                             routeJOB.add("arrivalTime", secsToHMS(route.getStopTime().getArrivalTime()));
                             routesJAB.add(routeJOB);
                         }
@@ -128,6 +157,7 @@ public class DeviceAPI extends HttpServlet {
                     JsonObject stopsJO = stopsJOB.build();
                     System.out.println(stopsJO.toString());
                     jw.writeObject(stopsJO);
+
                     break;
                 }
 
