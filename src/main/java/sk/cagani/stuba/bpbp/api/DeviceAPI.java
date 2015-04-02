@@ -57,8 +57,7 @@ public class DeviceAPI extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         System.out.println("[POST]");
-        response.setContentType("text/html; charset=UTF-8");
-        response.setContentType("text/json");
+        response.setContentType("text/json; charset=UTF-8");
         Map<String, Object> jwConfig = new HashMap<>();
         jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
         JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream(), Charset.forName("UTF-8"));
