@@ -10,6 +10,8 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -63,16 +65,17 @@ public class DeviceAPI extends HttpServlet {
         JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream(), Charset.forName("UTF-8"));
         System.out.println("[req URI]: " + request.getRequestURI());
         System.out.println(request.getParameterMap().toString());
-
+        Boolean isBreak = false;
         if (!request.getParameterMap().isEmpty()) {
             switch (request.getParameter("requestContent")) {
                 case "CurrentStop": {
                     if (request.getParameter("stopName") != null) {
                         String requestStopName = request.getParameter("stopName");
-                        Charset.forName("UTF-8").encode(requestStopName);
-                        byte[] data = org.apache.commons.codec.binary.Base64.decodeBase64(requestStopName);
-                        String stopName = new String(data, "UTF-8");
-
+                        /*
+                         Charset.forName("UTF-8").encode(requestStopName);
+                         byte[] data = org.apache.commons.codec.binary.Base64.decodeBase64(requestStopName);
+                         String stopName = new String(data, "UTF-8");
+                         */
                         List<RouteData> routeList = new ArrayList<>();
                         Calendar c = Calendar.getInstance();
                         c.setTime(new Date());
@@ -87,7 +90,7 @@ public class DeviceAPI extends HttpServlet {
                         System.out.println(secondsSinceMidnight.intValue() + " since midnight ");
 
                         session = DatabaseConnector.getSession();
-                        List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", stopName)).list();
+                        List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", requestStopName)).list();
                         for (GtfsStops stop : stopList) {
                             List<GtfsStopTimes> stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight.intValue(), secondsSinceMidnight.intValue() + 1200)).addOrder(Order.asc("arrivalTime")).list();
                             for (GtfsStopTimes stopTimes : stopTimesList) {
@@ -103,28 +106,34 @@ public class DeviceAPI extends HttpServlet {
                                     if (lastPosition != null) {
                                         delay = lastPosition.getDelay();
                                     }
-                                    System.out.println(stopTimes.getGtfsTrips().getGtfsRoutes().getShortName() + " " + stop.getName() + " " + stopTimes.getGtfsTrips().getTripHeadsign() + " " + secsToHMS(stopTimes.getArrivalTime()) + " DELAY " + delay + " secs ");
+  //                                  System.out.println(stopTimes.getGtfsTrips().getGtfsRoutes().getShortName() + " " + stop.getName() + " " + stopTimes.getGtfsTrips().getTripHeadsign() + " " + secsToHMS(stopTimes.getArrivalTime()) + " DELAY " + delay + " secs ");
                                     RouteData routeData = new RouteData(stopTimes.getGtfsTrips().getGtfsRoutes(), stopTimes, stopTimes.getGtfsTrips(), lastPosition);
-                                    if (!routeList.contains(routeData)) {
-                                        routeList.add(routeData);
-                                    }
+                                    // if (!routeList.contains(routeData)) {
+                                    routeList.add(routeData);
                                 }
+                                // }
                             }
+//                            System.out.println(stop.getName());
                         }
+                        Collections.sort(routeList, new CustomComparator());
 
                         JsonArrayBuilder routesJAB = Json.createArrayBuilder();
+                        int routeIndex = 0;
                         for (RouteData route : routeList) {
-                            JsonObjectBuilder routeJOB = Json.createObjectBuilder();
-                            routeJOB.add("routeId", route.getRoute().getShortName());
-                            routeJOB.add("stopHeadSign", route.getGtfsTrip().getTripHeadsign());
-                            routeJOB.add("routeType", route.getRoute().getType());
-                            if (route.getTripPositions() != null) {
-                                routeJOB.add("delay", route.getTripPositions().getDelay());
-                            } else {
-                                routeJOB.add("delay", "0");
+                            if (routeIndex < 15) {
+                                JsonObjectBuilder routeJOB = Json.createObjectBuilder();
+                                routeJOB.add("routeId", route.getRoute().getShortName());
+                                routeJOB.add("stopHeadSign", route.getGtfsTrip().getTripHeadsign());
+                                routeJOB.add("routeType", route.getRoute().getType());
+                                if (route.getTripPositions() != null) {
+                                    routeJOB.add("delay", route.getTripPositions().getDelay());
+                                } else {
+                                    routeJOB.add("delay", "0");
+                                }
+                                routeJOB.add("arrivalTime", secsToHMS(route.getStopTime().getArrivalTime()));
+                                routesJAB.add(routeJOB);
                             }
-                            routeJOB.add("arrivalTime", secsToHMS(route.getStopTime().getArrivalTime()));
-                            routesJAB.add(routeJOB);
+                            routeIndex++;
                         }
                         session.getTransaction().commit();
                         session.close();
@@ -134,6 +143,7 @@ public class DeviceAPI extends HttpServlet {
                     }
                     break;
                 }
+
                 case "allStops": {
                     logger.debug("in api call allStops " + request.getRequestURI() + " " + request.getRequestURL());
                     session = DatabaseConnector.getSession();
@@ -167,6 +177,7 @@ public class DeviceAPI extends HttpServlet {
         } else {
             response.getOutputStream().write(("invalid call EMPTY PARAM" + request.getRequestURI()).getBytes());
         }
+
         response.setStatus(HttpServletResponse.SC_OK);
 
     }
@@ -192,8 +203,10 @@ public class DeviceAPI extends HttpServlet {
 
                 logger.debug("in api call allStops " + request.getRequestURI() + " " + request.getRequestURL());
                 session = DatabaseConnector.getSession();
-                List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class).list();
-                session.getTransaction().commit(); //closes transaction
+                List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class
+                ).list();
+                session.getTransaction()
+                        .commit(); //closes transaction
 
                 JsonArrayBuilder stopsJAB = Json.createArrayBuilder();
                 for (GtfsStops stop : stopsList) {
@@ -207,8 +220,11 @@ public class DeviceAPI extends HttpServlet {
                     }
                 }
                 JsonObjectBuilder stopsJOB = Json.createObjectBuilder();
-                stopsJOB.add("stops", stopsJAB);
+
+                stopsJOB.add(
+                        "stops", stopsJAB);
                 JsonObject stopsJO = stopsJOB.build();
+
                 System.out.println(stopsJO.toString());
                 jw.writeObject(stopsJO);
             }
@@ -226,5 +242,14 @@ public class DeviceAPI extends HttpServlet {
         int seconds = totalSecs % 60;
 
         return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+
+    }
+
+    public class CustomComparator implements Comparator<RouteData> {
+
+        @Override
+        public int compare(RouteData o1, RouteData o2) {
+            return o1.getStopTime().getArrivalTime().compareTo(o2.getStopTime().getArrivalTime());
+        }
     }
 }
