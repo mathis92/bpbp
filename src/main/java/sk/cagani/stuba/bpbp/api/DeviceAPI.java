@@ -36,6 +36,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeConstants;
 import org.json.simple.JSONArray;
 import org.slf4j.LoggerFactory;
+import sk.cagani.stuba.bpbp.device.CurrentDay;
 import sk.cagani.stuba.bpbp.device.RouteData;
 import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
 import stuba.bpbphibernatemapper.GtfsCalendarDates;
@@ -59,7 +60,7 @@ public class DeviceAPI extends HttpServlet {
 
     private final org.slf4j.Logger logger = LoggerFactory.getLogger(DeviceAPI.class);
 
-   // private Session session;
+    // private Session session;
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         System.out.println("[POST]");
@@ -88,7 +89,6 @@ public class DeviceAPI extends HttpServlet {
                         Long timeSinceMidnight = new Date().getTime() - (c.getTimeInMillis());
                         Long secondsSinceMidnight = timeSinceMidnight / 1000;
                         System.out.println(secondsSinceMidnight.intValue() + " since midnight ");
-                        String currentDay = getCurrentDay();
                         Session session = DatabaseConnector.getSession();
                         Transaction tx = null;
                         tx = session.beginTransaction(); //open the transaction
@@ -96,7 +96,7 @@ public class DeviceAPI extends HttpServlet {
                         for (GtfsStops stop : stopList) {
                             List<GtfsStopTimes> stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight.intValue(), secondsSinceMidnight.intValue() + 1200)).addOrder(Order.asc("arrivalTime")).list();
                             for (GtfsStopTimes stopTimes : stopTimesList) {
-                                if (stopTimes.getGtfsTrips().getServiceIdId().equals(currentDay)) {
+                                if (stopTimes.getGtfsTrips().getServiceIdId().equals(CurrentDay.getDay())) {
                                     List<TripPositions> tripPositionList = session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", stopTimes.getGtfsTrips())).addOrder(Order.desc("id")).list();
                                     TripPositions lastPosition;
                                     if (!tripPositionList.isEmpty()) {
@@ -206,7 +206,7 @@ public class DeviceAPI extends HttpServlet {
             case "/api/allStops": {
 
                 logger.debug("in api call allStops " + request.getRequestURI() + " " + request.getRequestURL());
-              Session  session = DatabaseConnector.getSession();
+                Session session = DatabaseConnector.getSession();
                 List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class
                 ).list();
                 session.getTransaction()
@@ -257,35 +257,5 @@ public class DeviceAPI extends HttpServlet {
         }
     }
 
-    public String getCurrentDay() {
-        DateTime currentDate = new org.joda.time.DateTime();
-        Session session = DatabaseConnector.getSession();
-        Transaction tx = session.beginTransaction();
-        List<GtfsCalendarDates> calendarDatesList = session.createCriteria(GtfsCalendarDates.class).addOrder(Order.asc("date")).list();
-        String foundServiceId = null;
-        for (GtfsCalendarDates date : calendarDatesList) {
-            if (date.getDate().equals((currentDate.getYear() + "" + currentDate.getMonthOfYear() + "" + currentDate.getDayOfMonth()))) {
-                foundServiceId = date.getServiceIdId();
-                break;
-            }
-        }
-        tx.commit();
-
-       session.close();
-        if (foundServiceId == null) {
-            if (currentDate.getDayOfWeek() == DateTimeConstants.MONDAY
-                    || currentDate.getDayOfWeek() == DateTimeConstants.TUESDAY
-                    || currentDate.getDayOfWeek() == DateTimeConstants.WEDNESDAY
-                    || currentDate.getDayOfWeek() == DateTimeConstants.THURSDAY
-                    || currentDate.getDayOfWeek() == DateTimeConstants.FRIDAY) {
-                foundServiceId = "Prac.dny_0";
-            } else if (currentDate.getDayOfWeek() == DateTimeConstants.SATURDAY) {
-                foundServiceId = "Soboty_1";
-            } else {
-                foundServiceId = "Neděle+Sv_2";
-            }
-        }
-        return foundServiceId;
-    }
 
 }

@@ -10,6 +10,7 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import sk.cagani.stuba.bpbp.api.DeviceAPI;
 import sk.cagani.stuba.bpbp.api.VehicleAPI;
+import sk.cagani.stuba.bpbp.device.CurrentDay;
 import sk.cagani.stuba.bpbp.webportal.ResourceServlet;
 
 /**
@@ -24,6 +25,7 @@ public class AppInit {
 
     public static void main(String[] args) throws Exception {
         DatabaseConnector dc = new DatabaseConnector();
+        new Thread(new CurrentDay()).start();
       //  dc.writeStopsToFile();
         new AppInit().startServlets();
     }
