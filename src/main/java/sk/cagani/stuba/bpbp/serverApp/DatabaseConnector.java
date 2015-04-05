@@ -59,7 +59,6 @@ public class DatabaseConnector {
 
     public static Session getSession() {
         Session session = sessionFactory.openSession();
-        session.beginTransaction(); //open the transaction
         return session;
     }
 

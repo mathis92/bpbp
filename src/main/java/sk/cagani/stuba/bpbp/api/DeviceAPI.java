@@ -28,13 +28,18 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.hibernate.Session;
+import org.hibernate.Transaction;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeConstants;
 import org.json.simple.JSONArray;
 import org.slf4j.LoggerFactory;
 import sk.cagani.stuba.bpbp.device.RouteData;
 import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
+import stuba.bpbphibernatemapper.GtfsCalendarDates;
+import stuba.bpbphibernatemapper.GtfsCalendars;
 import stuba.bpbphibernatemapper.GtfsRoutes;
 import stuba.bpbphibernatemapper.GtfsStopTimes;
 import stuba.bpbphibernatemapper.GtfsStops;
@@ -54,8 +59,7 @@ public class DeviceAPI extends HttpServlet {
 
     private final org.slf4j.Logger logger = LoggerFactory.getLogger(DeviceAPI.class);
 
-    private Session session;
-
+   // private Session session;
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         System.out.println("[POST]");
@@ -71,11 +75,7 @@ public class DeviceAPI extends HttpServlet {
                 case "CurrentStop": {
                     if (request.getParameter("stopName") != null) {
                         String requestStopName = request.getParameter("stopName");
-                        /*
-                         Charset.forName("UTF-8").encode(requestStopName);
-                         byte[] data = org.apache.commons.codec.binary.Base64.decodeBase64(requestStopName);
-                         String stopName = new String(data, "UTF-8");
-                         */
+
                         List<RouteData> routeList = new ArrayList<>();
                         Calendar c = Calendar.getInstance();
                         c.setTime(new Date());
@@ -88,13 +88,15 @@ public class DeviceAPI extends HttpServlet {
                         Long timeSinceMidnight = new Date().getTime() - (c.getTimeInMillis());
                         Long secondsSinceMidnight = timeSinceMidnight / 1000;
                         System.out.println(secondsSinceMidnight.intValue() + " since midnight ");
-
-                        session = DatabaseConnector.getSession();
+                        String currentDay = getCurrentDay();
+                        Session session = DatabaseConnector.getSession();
+                        Transaction tx = null;
+                        tx = session.beginTransaction(); //open the transaction
                         List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", requestStopName)).list();
                         for (GtfsStops stop : stopList) {
                             List<GtfsStopTimes> stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight.intValue(), secondsSinceMidnight.intValue() + 1200)).addOrder(Order.asc("arrivalTime")).list();
                             for (GtfsStopTimes stopTimes : stopTimesList) {
-                                if (stopTimes.getGtfsTrips().getServiceIdId().equals("Prac.dny_0")) {
+                                if (stopTimes.getGtfsTrips().getServiceIdId().equals(currentDay)) {
                                     List<TripPositions> tripPositionList = session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", stopTimes.getGtfsTrips())).addOrder(Order.desc("id")).list();
                                     TripPositions lastPosition;
                                     if (!tripPositionList.isEmpty()) {
@@ -106,7 +108,7 @@ public class DeviceAPI extends HttpServlet {
                                     if (lastPosition != null) {
                                         delay = lastPosition.getDelay();
                                     }
-  //                                  System.out.println(stopTimes.getGtfsTrips().getGtfsRoutes().getShortName() + " " + stop.getName() + " " + stopTimes.getGtfsTrips().getTripHeadsign() + " " + secsToHMS(stopTimes.getArrivalTime()) + " DELAY " + delay + " secs ");
+                                    //                                  System.out.println(stopTimes.getGtfsTrips().getGtfsRoutes().getShortName() + " " + stop.getName() + " " + stopTimes.getGtfsTrips().getTripHeadsign() + " " + secsToHMS(stopTimes.getArrivalTime()) + " DELAY " + delay + " secs ");
                                     RouteData routeData = new RouteData(stopTimes.getGtfsTrips().getGtfsRoutes(), stopTimes, stopTimes.getGtfsTrips(), lastPosition);
                                     // if (!routeList.contains(routeData)) {
                                     routeList.add(routeData);
@@ -135,8 +137,10 @@ public class DeviceAPI extends HttpServlet {
                             }
                             routeIndex++;
                         }
-                        session.getTransaction().commit();
+                        tx.commit();
+
                         session.close();
+
                         JsonArray routesJA = routesJAB.build();
                         System.out.println(routesJA.toString());
                         jw.writeArray(routesJA);
@@ -146,7 +150,7 @@ public class DeviceAPI extends HttpServlet {
 
                 case "allStops": {
                     logger.debug("in api call allStops " + request.getRequestURI() + " " + request.getRequestURL());
-                    session = DatabaseConnector.getSession();
+                    Session session = DatabaseConnector.getSession();
                     List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class).list();
                     session.getTransaction().commit(); //closes transaction
                     session.close();
@@ -202,7 +206,7 @@ public class DeviceAPI extends HttpServlet {
             case "/api/allStops": {
 
                 logger.debug("in api call allStops " + request.getRequestURI() + " " + request.getRequestURL());
-                session = DatabaseConnector.getSession();
+              Session  session = DatabaseConnector.getSession();
                 List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class
                 ).list();
                 session.getTransaction()
@@ -252,4 +256,36 @@ public class DeviceAPI extends HttpServlet {
             return o1.getStopTime().getArrivalTime().compareTo(o2.getStopTime().getArrivalTime());
         }
     }
+
+    public String getCurrentDay() {
+        DateTime currentDate = new org.joda.time.DateTime();
+        Session session = DatabaseConnector.getSession();
+        Transaction tx = session.beginTransaction();
+        List<GtfsCalendarDates> calendarDatesList = session.createCriteria(GtfsCalendarDates.class).addOrder(Order.asc("date")).list();
+        String foundServiceId = null;
+        for (GtfsCalendarDates date : calendarDatesList) {
+            if (date.getDate().equals((currentDate.getYear() + "" + currentDate.getMonthOfYear() + "" + currentDate.getDayOfMonth()))) {
+                foundServiceId = date.getServiceIdId();
+                break;
+            }
+        }
+        tx.commit();
+
+       session.close();
+        if (foundServiceId == null) {
+            if (currentDate.getDayOfWeek() == DateTimeConstants.MONDAY
+                    || currentDate.getDayOfWeek() == DateTimeConstants.TUESDAY
+                    || currentDate.getDayOfWeek() == DateTimeConstants.WEDNESDAY
+                    || currentDate.getDayOfWeek() == DateTimeConstants.THURSDAY
+                    || currentDate.getDayOfWeek() == DateTimeConstants.FRIDAY) {
+                foundServiceId = "Prac.dny_0";
+            } else if (currentDate.getDayOfWeek() == DateTimeConstants.SATURDAY) {
+                foundServiceId = "Soboty_1";
+            } else {
+                foundServiceId = "Neděle+Sv_2";
+            }
+        }
+        return foundServiceId;
+    }
+
 }
