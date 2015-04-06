@@ -22,6 +22,7 @@ import org.hibernate.Transaction;
 import org.hibernate.criterion.Restrictions;
 import org.slf4j.LoggerFactory;
 import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
+import sk.cagani.stuba.bpbp.utilities.Utils;
 import stuba.bpbphibernatemapper.GtfsAgencies;
 import stuba.bpbphibernatemapper.GtfsStopTimes;
 import stuba.bpbphibernatemapper.GtfsStops;
@@ -45,7 +46,6 @@ public class VehicleAPI extends HttpServlet {
     private final org.slf4j.Logger logger = LoggerFactory.getLogger(VehicleAPI.class);
 
     //private Session session;
-
     private String agencyId;
 
     public VehicleAPI() {
@@ -54,20 +54,65 @@ public class VehicleAPI extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-      //  System.out.println("[POST]");
+        Session session;
+        Transaction transaction;
+        System.out.println("[POST]");
+
+        response.setContentType("text/json");
+        Map<String, Boolean> jwConfig = new HashMap<>();
+        jwConfig.put(JsonGenerator.PRETTY_PRINTING, Boolean.TRUE);
+        JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
 
         switch (request.getRequestURI()) {
-            case "/api/vehicle/updateLocation":
-                TripPositions tripPosition;
+            case "/api/vehicle/init":
 
-               Session  session = DatabaseConnector.getSession();
-                Transaction tx = null;
-                tx = session.beginTransaction();
-                List<TripPositions> tripPositionList = session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", new GtfsTrips(new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id"))))).list();
-                if (!tripPositionList.isEmpty()) {
-                    tripPosition = tripPositionList.get(0);
-                    tripPosition.setLat(Double.parseDouble(request.getParameter("lat")));
-                    tripPosition.setLon(Double.parseDouble(request.getParameter("lon")));
+                Float lat = Float.parseFloat(request.getParameter("lat"));
+                Float lon = Float.parseFloat(request.getParameter("lon"));
+
+                session = DatabaseConnector.getSession();
+                transaction = session.beginTransaction();
+
+                List<GtfsStops> gtfsStops = session.createCriteria(GtfsStops.class)
+                        .add(Restrictions.between("lat", lat - 0.0005, lat + 0.0005))
+                        .add(Restrictions.between("lon", lon - 0.0005, lon + 0.0005)).list();
+
+                JsonArrayBuilder tripsJAB = Json.createArrayBuilder();
+                for (GtfsStops stop : gtfsStops) {
+                    for (GtfsStopTimes stopTime : (Set<GtfsStopTimes>) stop.getGtfsStopTimeses()) {
+                        int secsFromMidnight = 44400;//Utils.getSecondsFromMidnight();
+                        if (stopTime.getDepartureTime() > secsFromMidnight - 300 && stopTime.getDepartureTime() < secsFromMidnight + 300) {
+                            if (stopTime.getGtfsTrips().getServiceIdId().equals("Prac.dny_0"/*Utils.getActualServiceId()*/)) {
+                                if (!stop.getName().equals(stopTime.getGtfsTrips().getTripHeadsign())) {
+                                    JsonObjectBuilder tripJOB = Json.createObjectBuilder();
+                                    tripJOB.add("routeName", stopTime.getGtfsTrips().getGtfsRoutes().getShortName());
+                                    tripJOB.add("tripId", stopTime.getGtfsTrips().getId().getId());
+                                    tripJOB.add("departureTime", stopTime.getDepartureTime());
+                                    tripJOB.add("headSign", stopTime.getGtfsTrips().getTripHeadsign());
+
+                                    tripsJAB.add(tripJOB);
+                                }
+                            }
+                        }
+                    }
+                }
+                transaction.commit();
+                session.close();
+
+                JsonObjectBuilder possibleTripJOB = Json.createObjectBuilder();
+                possibleTripJOB.add("possibleTripList", tripsJAB);
+                JsonObject possibleTripJO = possibleTripJOB.build();
+                System.out.println(possibleTripJO.toString());
+                jw.writeObject(possibleTripJO);
+                break;
+            case "/api/vehicle/updateLocation":
+                session = DatabaseConnector.getSession();
+                transaction = session.beginTransaction();
+                //List<TripPositions> tripPositionList = session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", new GtfsTrips())).list();
+                TripPositions tripPosition = (TripPositions) session.get(TripPositions.class, new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id")));
+
+                if (tripPosition == null) {
+                    tripPosition.setLat(Float.parseFloat(request.getParameter("lat")));
+                    tripPosition.setLon(Float.parseFloat(request.getParameter("lon")));
                     tripPosition.setDelay(Integer.parseInt(request.getParameter("delay")));
                     tripPosition.setSpeed(Double.parseDouble(request.getParameter("spd")));
                     tripPosition.setAccuracy(Double.parseDouble(request.getParameter("acc")));
@@ -83,19 +128,13 @@ public class VehicleAPI extends HttpServlet {
 
                 }
                 session.saveOrUpdate(tripPosition);
-                tx.commit();
+                transaction.commit();
                 session.close();
-                
 
                 //v buducnosti tu zrob to cekovanie pred zastavkou a potom ak hej, tak treba tie linky najblizsie poslat abo co
                 break;
             case "/api/vehicle/getStopsAndPoi":
                 System.out.println("tripId: " + request.getParameter("gtfs_trip_id"));
-
-                response.setContentType("text/json");
-                Map<String, Boolean> jwConfig = new HashMap<>();
-                jwConfig.put(JsonGenerator.PRETTY_PRINTING, Boolean.TRUE);
-                JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
 
                 Session session1 = DatabaseConnector.getSession();
                 Transaction tx1 = session1.beginTransaction();
@@ -139,11 +178,11 @@ public class VehicleAPI extends HttpServlet {
                 tripInfoJOB.add("poiList", poiJAB);
                 tripInfoJOB.add("stopsList", stopsJAB);
 
-                JsonObject poisJO = tripInfoJOB.build();
+                JsonObject tripInfoJO = tripInfoJOB.build();
 
-                System.out.println(poisJO.toString());
+                System.out.println(tripInfoJO.toString());
 
-                jw.writeObject(poisJO);
+                jw.writeObject(tripInfoJO);
                 break;
         }
         response.setStatus(HttpServletResponse.SC_OK);
@@ -161,7 +200,7 @@ public class VehicleAPI extends HttpServlet {
             case "/api/allStops": {
 
                 logger.debug("in api call allStops " + request.getRequestURI() + " " + request.getRequestURL());
-               Session session = DatabaseConnector.getSession();
+                Session session = DatabaseConnector.getSession();
                 List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class).list();
                 session.getTransaction().commit(); //closes transaction
                 session.close();
@@ -221,7 +260,7 @@ public class VehicleAPI extends HttpServlet {
                 break;
 
             case "/api/getPoi":
-               Session session = DatabaseConnector.getSession();
+                Session session = DatabaseConnector.getSession();
                 List<Poi> poiList = session.createCriteria(Poi.class).list();
                 session.getTransaction().commit();
                 session.close();

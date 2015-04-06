@@ -1,21 +1,15 @@
 package sk.cagani.stuba.bpbp.api;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
@@ -28,22 +22,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
-import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeConstants;
-import org.json.simple.JSONArray;
 import org.slf4j.LoggerFactory;
-import sk.cagani.stuba.bpbp.device.CurrentDay;
 import sk.cagani.stuba.bpbp.device.RouteData;
 import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
-import stuba.bpbphibernatemapper.GtfsCalendarDates;
-import stuba.bpbphibernatemapper.GtfsCalendars;
-import stuba.bpbphibernatemapper.GtfsRoutes;
+import sk.cagani.stuba.bpbp.utilities.Utils;
 import stuba.bpbphibernatemapper.GtfsStopTimes;
 import stuba.bpbphibernatemapper.GtfsStops;
-import stuba.bpbphibernatemapper.GtfsTrips;
 import stuba.bpbphibernatemapper.TripPositions;
 
 /*
@@ -77,25 +63,16 @@ public class DeviceAPI extends HttpServlet {
                         String requestStopName = request.getParameter("stopName");
 
                         List<RouteData> routeList = new ArrayList<>();
-                        Calendar c = Calendar.getInstance();
-                        c.setTime(new Date());
-                        c.set(Calendar.HOUR_OF_DAY, 0);
-                        c.set(Calendar.MINUTE, 0);
-                        c.set(Calendar.SECOND, 0);
-                        c.set(Calendar.MILLISECOND, 0);
-
-                        System.out.println(c.getTimeInMillis());
-                        Long timeSinceMidnight = new Date().getTime() - (c.getTimeInMillis());
-                        Long secondsSinceMidnight = timeSinceMidnight / 1000;
-                        System.out.println(secondsSinceMidnight.intValue() + " since midnight ");
+                        
                         Session session = DatabaseConnector.getSession();
                         Transaction tx = null;
                         tx = session.beginTransaction(); //open the transaction
+                        int secondsSinceMidnight = Utils.getSecondsFromMidnight();
                         List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", requestStopName)).list();
                         for (GtfsStops stop : stopList) {
-                            List<GtfsStopTimes> stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight.intValue(), secondsSinceMidnight.intValue() + 1200)).addOrder(Order.asc("arrivalTime")).list();
+                            List<GtfsStopTimes> stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight, secondsSinceMidnight + 1200)).addOrder(Order.asc("arrivalTime")).list();
                             for (GtfsStopTimes stopTimes : stopTimesList) {
-                                if (stopTimes.getGtfsTrips().getServiceIdId().equals(CurrentDay.getDay())) {
+                                if (stopTimes.getGtfsTrips().getServiceIdId().equals(Utils.getActualServiceId())) {
                                     List<TripPositions> tripPositionList = session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", stopTimes.getGtfsTrips())).addOrder(Order.desc("id")).list();
                                     TripPositions lastPosition;
                                     if (!tripPositionList.isEmpty()) {

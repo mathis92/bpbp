@@ -58,8 +58,7 @@ public class DatabaseConnector {
     }
 
     public static Session getSession() {
-        Session session = sessionFactory.openSession();
-        return session;
+        return sessionFactory.openSession();
     }
 
     public void writeStopsToFile(){
