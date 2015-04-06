@@ -107,15 +107,16 @@ public class VehicleAPI extends HttpServlet {
                 
                 Session sessionUpdateLocation = DatabaseConnector.getSession();
                 Transaction transactionUpdateLocation = sessionUpdateLocation.beginTransaction();
-                                              
+                    /*                          
                 TripPositions tripPosition = null;
-                List<TripPositions> tripPositionList = sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id")))).list();
-                /*
+                List<TripPositions> tripPositionList = sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", new GtfsTrips(new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id"))))).list();
+                
                 if (!tripPositionList.isEmpty()) {
                     tripPosition = tripPositionList.get(0);
                 }
+                */
+                TripPositions tripPosition = (TripPositions) sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", new GtfsTrips(new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id"))))).uniqueResult();
                 System.out.println("tripPosition: " + tripPosition);
-                //TripPositions tripPosition = (TripPositions) session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id")))).uniqueResult();
                 //tripPosition = (TripPositions) session.get(TripPositions.class, new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id")));
                 
                 if (tripPosition == null) {
@@ -134,7 +135,7 @@ public class VehicleAPI extends HttpServlet {
                     tripPosition.setAccuracy(Double.parseDouble(request.getParameter("acc")));
                 }
 
-                sessionUpdateLocation.saveOrUpdate(tripPosition);*/
+                sessionUpdateLocation.saveOrUpdate(tripPosition);
                 transactionUpdateLocation.commit();
                 sessionUpdateLocation.close();
 
