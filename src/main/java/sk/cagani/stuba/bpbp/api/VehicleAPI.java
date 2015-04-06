@@ -50,6 +50,7 @@ public class VehicleAPI extends HttpServlet {
 
     public VehicleAPI() {
         agencyId = ((GtfsAgencies) DatabaseConnector.getSession().createCriteria(GtfsAgencies.class).list().get(0)).getId();
+        System.out.println("\n\nagencyId: " + agencyId + "\n");
     }
 
     @Override
@@ -66,7 +67,7 @@ public class VehicleAPI extends HttpServlet {
             case "/api/vehicle/init":
                 Session sessionInit = DatabaseConnector.getSession();
                 Transaction transactionInit = sessionInit.beginTransaction();
-                
+
                 Double lat = Double.parseDouble(request.getParameter("lat"));
                 Double lon = Double.parseDouble(request.getParameter("lon"));
 
@@ -103,30 +104,33 @@ public class VehicleAPI extends HttpServlet {
                 jw.writeObject(possibleTripJO);
                 break;
             case "/api/vehicle/updateLocation":
-                System.out.println("trip id:  " + (request.getParameter("gtfs_trip_id") == null ? "empty" : request.getParameter("gtfs_trip_id")));
-                
+                System.out.println("trip id:  " + (request.getParameter("trip_id") == null ? "empty" : request.getParameter("trip_id")));
+
                 Session sessionUpdateLocation = DatabaseConnector.getSession();
                 Transaction transactionUpdateLocation = sessionUpdateLocation.beginTransaction();
-                    /*                          
-                TripPositions tripPosition = null;
-                List<TripPositions> tripPositionList = sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", new GtfsTrips(new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id"))))).list();
-                
-                if (!tripPositionList.isEmpty()) {
-                    tripPosition = tripPositionList.get(0);
-                }
-                */
-                TripPositions tripPosition = (TripPositions) sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", new GtfsTrips(new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id"))))).uniqueResult();
+
+                GtfsTrips trip = (GtfsTrips) sessionUpdateLocation.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("trip_id")));
+                System.out.println("trip: " + trip);
+                /*
+                 TripPositions tripPosition = null;
+                 List<TripPositions> tripPositionList = sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", new GtfsTrips(new GtfsTripsId(agencyId, request.getParameter("trip_id"))))).list();
+
+                 if (!tripPositionList.isEmpty()) {
+                 tripPosition = tripPositionList.get(0);
+                 }
+                 */
+                TripPositions tripPosition = (TripPositions) sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", trip)).uniqueResult();
                 System.out.println("tripPosition: " + tripPosition);
                 //tripPosition = (TripPositions) session.get(TripPositions.class, new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id")));
-                
+
                 if (tripPosition == null) {
                     tripPosition = new TripPositions(
-                            new GtfsTrips(new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id"))),
+                            trip,
                             Double.parseDouble(request.getParameter("lat")),
                             Double.parseDouble(request.getParameter("lon")),
                             Integer.parseInt(request.getParameter("delay")),
                             Double.parseDouble(request.getParameter("spd")),
-                            Double.parseDouble(request.getParameter("acc")));                    
+                            Double.parseDouble(request.getParameter("acc")));
                 } else {
                     tripPosition.setLat(Double.parseDouble(request.getParameter("lat")));
                     tripPosition.setLon(Double.parseDouble(request.getParameter("lon")));
@@ -136,6 +140,7 @@ public class VehicleAPI extends HttpServlet {
                 }
 
                 sessionUpdateLocation.saveOrUpdate(tripPosition);
+
                 transactionUpdateLocation.commit();
                 sessionUpdateLocation.close();
 
