@@ -54,9 +54,8 @@ public class VehicleAPI extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        Session session;
-        Transaction transaction;
-        System.out.println("[POST]");
+        System.out.print("[POST]  ");
+        //System.out.print("[POST]  " + request.getRequestURI());
 
         response.setContentType("text/json");
         Map<String, Boolean> jwConfig = new HashMap<>();
@@ -65,14 +64,13 @@ public class VehicleAPI extends HttpServlet {
 
         switch (request.getRequestURI()) {
             case "/api/vehicle/init":
-
+                Session sessionInit = DatabaseConnector.getSession();
+                Transaction transactionInit = sessionInit.beginTransaction();
+                
                 Double lat = Double.parseDouble(request.getParameter("lat"));
                 Double lon = Double.parseDouble(request.getParameter("lon"));
 
-                session = DatabaseConnector.getSession();
-                transaction = session.beginTransaction();
-
-                List<GtfsStops> gtfsStops = session.createCriteria(GtfsStops.class)
+                List<GtfsStops> gtfsStops = sessionInit.createCriteria(GtfsStops.class)
                         .add(Restrictions.between("lat", lat - 0.0005, lat + 0.0005))
                         .add(Restrictions.between("lon", lon - 0.0005, lon + 0.0005)).list();
 
@@ -95,8 +93,8 @@ public class VehicleAPI extends HttpServlet {
                         }
                     }
                 }
-                transaction.commit();
-                session.close();
+                transactionInit.commit();
+                sessionInit.close();
 
                 JsonObjectBuilder possibleTripJOB = Json.createObjectBuilder();
                 possibleTripJOB.add("possibleTripList", tripsJAB);
@@ -105,43 +103,52 @@ public class VehicleAPI extends HttpServlet {
                 jw.writeObject(possibleTripJO);
                 break;
             case "/api/vehicle/updateLocation":
-                session = DatabaseConnector.getSession();
-                transaction = session.beginTransaction();
-                //List<TripPositions> tripPositionList = session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", new GtfsTrips())).list();
-                TripPositions tripPosition = (TripPositions) session.get(TripPositions.class, new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id")));
-
+                System.out.println("trip id:  " + (request.getParameter("gtfs_trip_id") == null ? "empty" : request.getParameter("gtfs_trip_id")));
+                
+                Session sessionUpdateLocation = DatabaseConnector.getSession();
+                Transaction transactionUpdateLocation = sessionUpdateLocation.beginTransaction();
+                                              
+                TripPositions tripPosition = null;
+                List<TripPositions> tripPositionList = sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id")))).list();
+                /*
+                if (!tripPositionList.isEmpty()) {
+                    tripPosition = tripPositionList.get(0);
+                }
+                System.out.println("tripPosition: " + tripPosition);
+                //TripPositions tripPosition = (TripPositions) session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id")))).uniqueResult();
+                //tripPosition = (TripPositions) session.get(TripPositions.class, new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id")));
+                
                 if (tripPosition == null) {
+                    tripPosition = new TripPositions(
+                            new GtfsTrips(new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id"))),
+                            Double.parseDouble(request.getParameter("lat")),
+                            Double.parseDouble(request.getParameter("lon")),
+                            Integer.parseInt(request.getParameter("delay")),
+                            Double.parseDouble(request.getParameter("spd")),
+                            Double.parseDouble(request.getParameter("acc")));                    
+                } else {
                     tripPosition.setLat(Double.parseDouble(request.getParameter("lat")));
                     tripPosition.setLon(Double.parseDouble(request.getParameter("lon")));
                     tripPosition.setDelay(Integer.parseInt(request.getParameter("delay")));
                     tripPosition.setSpeed(Double.parseDouble(request.getParameter("spd")));
                     tripPosition.setAccuracy(Double.parseDouble(request.getParameter("acc")));
-                } else {
-                    tripPosition = new TripPositions(
-                            new GtfsTrips(
-                                    new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id"))),
-                            Double.parseDouble(request.getParameter("lat")),
-                            Double.parseDouble(request.getParameter("lon")),
-                            Integer.parseInt(request.getParameter("delay")),
-                            Double.parseDouble(request.getParameter("spd")),
-                            Double.parseDouble(request.getParameter("acc")));
-
                 }
-                session.saveOrUpdate(tripPosition);
-                transaction.commit();
-                session.close();
+
+                sessionUpdateLocation.saveOrUpdate(tripPosition);*/
+                transactionUpdateLocation.commit();
+                sessionUpdateLocation.close();
 
                 //v buducnosti tu zrob to cekovanie pred zastavkou a potom ak hej, tak treba tie linky najblizsie poslat abo co
                 break;
             case "/api/vehicle/getStopsAndPoi":
-                System.out.println("tripId: " + request.getParameter("gtfs_trip_id"));
+                System.out.println("tripId: " + request.getParameter("trip_id"));
 
                 Session session1 = DatabaseConnector.getSession();
                 Transaction tx1 = session1.beginTransaction();
                 /*
                  get all POI
                  */
-                GtfsTrips gtfsTrip = (GtfsTrips) session1.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id")));
+                GtfsTrips gtfsTrip = (GtfsTrips) session1.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("trip_id")));
 
                 JsonArrayBuilder poiJAB = Json.createArrayBuilder();
                 for (PoisInRoutes pir : (Set<PoisInRoutes>) gtfsTrip.getGtfsRoutes().getPoisInRouteses()) {

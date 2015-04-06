@@ -83,5 +83,13 @@ public class Utils implements Runnable {
         int secs = duration.toStandardSeconds().getSeconds();
         return secs < 12600 ? secs + 86400 : secs;
     }
+    
+    public static String secsToHMS(int totalSecs) {
+        int hours = totalSecs / 3600;
+        int minutes = (totalSecs % 3600) / 60;
+        int seconds = totalSecs % 60;
+
+        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+    }
 
 }

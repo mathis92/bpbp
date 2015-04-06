@@ -10,13 +10,11 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.json.Json;
@@ -31,14 +29,11 @@ import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
-import org.joda.time.DateTime;
-import org.joda.time.JodaTimePermission;
 
 import org.slf4j.LoggerFactory;
-import stuba.bpbphibernatemapper.GtfsRoutes;
+import sk.cagani.stuba.bpbp.utilities.Utils;
 import stuba.bpbphibernatemapper.GtfsStopTimes;
 import stuba.bpbphibernatemapper.GtfsStops;
-import stuba.bpbphibernatemapper.GtfsTrips;
 
 /**
  *
@@ -137,7 +132,7 @@ public class DatabaseConnector {
             List<GtfsStopTimes> stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight.intValue(), secondsSinceMidnight.intValue() + 1200)).addOrder(Order.asc("arrivalTime")).list();
             for (GtfsStopTimes stopTimes : stopTimesList) {
                 if (stopTimes.getGtfsTrips().getServiceIdId().equals("Prac.dny_0")) {
-                    System.out.println(stopTimes.getGtfsTrips().getGtfsRoutes().getShortName() + " " + stop.getName() + " "+ stopTimes.getGtfsTrips().getTripHeadsign() + " " + secsToHMS(stopTimes.getArrivalTime()));
+                    System.out.println(stopTimes.getGtfsTrips().getGtfsRoutes().getShortName() + " " + stop.getName() + " "+ stopTimes.getGtfsTrips().getTripHeadsign() + " " + Utils.secsToHMS(stopTimes.getArrivalTime()));
                 }
             }
         }
@@ -145,11 +140,5 @@ public class DatabaseConnector {
 
     }
 
-    public String secsToHMS(int totalSecs) {
-        int hours = totalSecs / 3600;
-        int minutes = (totalSecs % 3600) / 60;
-        int seconds = totalSecs % 60;
-
-        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
-    }
+    
 }
