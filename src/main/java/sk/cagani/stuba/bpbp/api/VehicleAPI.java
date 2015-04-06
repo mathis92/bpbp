@@ -54,7 +54,7 @@ public class VehicleAPI extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        System.out.println("[POST]");
+      //  System.out.println("[POST]");
 
         switch (request.getRequestURI()) {
             case "/api/vehicle/updateLocation":
@@ -66,20 +66,20 @@ public class VehicleAPI extends HttpServlet {
                 List<TripPositions> tripPositionList = session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", new GtfsTrips(new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id"))))).list();
                 if (!tripPositionList.isEmpty()) {
                     tripPosition = tripPositionList.get(0);
-                    tripPosition.setLat(Float.parseFloat(request.getParameter("lat")));
-                    tripPosition.setLon(Float.parseFloat(request.getParameter("lon")));
+                    tripPosition.setLat(Double.parseDouble(request.getParameter("lat")));
+                    tripPosition.setLon(Double.parseDouble(request.getParameter("lon")));
                     tripPosition.setDelay(Integer.parseInt(request.getParameter("delay")));
-                    tripPosition.setSpeed(Float.parseFloat(request.getParameter("spd")));
-                    tripPosition.setAccuracy(Float.parseFloat(request.getParameter("acc")));
+                    tripPosition.setSpeed(Double.parseDouble(request.getParameter("spd")));
+                    tripPosition.setAccuracy(Double.parseDouble(request.getParameter("acc")));
                 } else {
                     tripPosition = new TripPositions(
                             new GtfsTrips(
                                     new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id"))),
-                            Float.parseFloat(request.getParameter("lat")),
-                            Float.parseFloat(request.getParameter("lon")),
+                            Double.parseDouble(request.getParameter("lat")),
+                            Double.parseDouble(request.getParameter("lon")),
                             Integer.parseInt(request.getParameter("delay")),
-                            Float.parseFloat(request.getParameter("spd")),
-                            Float.parseFloat(request.getParameter("acc")));
+                            Double.parseDouble(request.getParameter("spd")),
+                            Double.parseDouble(request.getParameter("acc")));
 
                 }
                 session.saveOrUpdate(tripPosition);
@@ -97,12 +97,12 @@ public class VehicleAPI extends HttpServlet {
                 jwConfig.put(JsonGenerator.PRETTY_PRINTING, Boolean.TRUE);
                 JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
 
-                session = DatabaseConnector.getSession();
-
+                Session session1 = DatabaseConnector.getSession();
+                Transaction tx1 = session1.beginTransaction();
                 /*
                  get all POI
                  */
-                GtfsTrips gtfsTrip = (GtfsTrips) session.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id")));
+                GtfsTrips gtfsTrip = (GtfsTrips) session1.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id")));
 
                 JsonArrayBuilder poiJAB = Json.createArrayBuilder();
                 for (PoisInRoutes pir : (Set<PoisInRoutes>) gtfsTrip.getGtfsRoutes().getPoisInRouteses()) {
@@ -132,8 +132,8 @@ public class VehicleAPI extends HttpServlet {
                     stopsJAB.add(stopsJOB);
                 }
 
-                session.getTransaction().commit();
-                session.close();
+                tx1.commit();
+                session1.close();
 
                 JsonObjectBuilder tripInfoJOB = Json.createObjectBuilder();
                 tripInfoJOB.add("poiList", poiJAB);

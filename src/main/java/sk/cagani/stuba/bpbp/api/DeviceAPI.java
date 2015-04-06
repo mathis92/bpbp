@@ -5,7 +5,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -147,7 +146,45 @@ public class DeviceAPI extends HttpServlet {
                     }
                     break;
                 }
+                case "vehiclesPositions": {
+                    logger.debug("in api call vehiclePositions " + request.getRequestURI() + " " + request.getRequestURL());
+                    Session session = DatabaseConnector.getSession();
+                    Transaction tx = session.beginTransaction();
+                    double longitude = Double.parseDouble(request.getParameter("lon"));
+                    double latitude = Double.parseDouble(request.getParameter("lat"));
+                    double accLat = Double.parseDouble(request.getParameter("accLat"));
+                    double accLon = Double.parseDouble(request.getParameter("accLon"));
+                    
+                   
+                    System.out.println("lat " + (latitude - accLat) + " " + (latitude + accLat) + " lon " +  (longitude - accLon) +" " + (longitude + accLon));
+                    List<TripPositions> tripPositionsList = session.createCriteria(TripPositions.class).add(Restrictions.between("lat", round(latitude + accLat),round(latitude - accLat) )).list();//.add(Restrictions.between("lon", round(longitude + accLon),round(longitude - accLon))).list();
+                    JsonArrayBuilder vehicleJAB = Json.createArrayBuilder();
+                    System.out.println(tripPositionsList.size());
+                    for (TripPositions tripPosition : tripPositionsList) {
+                        GtfsTrips trip = tripPosition.getGtfsTrips();
+                        //   GtfsStopTimes stopTime = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsTrips", trip)).list().get(0);
+                        GtfsRoutes route = trip.getGtfsRoutes();
+                        JsonObjectBuilder vehicleJOB = Json.createObjectBuilder();
+                        vehicleJOB.add("shortName", route.getShortName());
+                        vehicleJOB.add("vehicleType", route.getType());
+                        vehicleJOB.add("lon", tripPosition.getLon());
+                        vehicleJOB.add("lat", tripPosition.getLat());
+                        vehicleJOB.add("headingTo", trip.getTripHeadsign());
+                        vehicleJOB.add("delay", tripPosition.getDelay());
+                        vehicleJOB.add("speed", tripPosition.getSpeed());
+                        vehicleJOB.add("lastStop", "maybeOnce");
+                        vehicleJOB.add("nextStop", "maybeOnce");
+                        vehicleJOB.add("arrivalTime", "maybeOnce");
+                        vehicleJAB.add(vehicleJOB);
+                    }
 
+                    tx.commit();
+                    session.close();
+                    JsonArray vehicleJA = vehicleJAB.build();
+                    System.out.println(vehicleJA.toString());
+                    jw.writeArray(vehicleJA);
+                    break;
+                }
                 case "allStops": {
                     logger.debug("in api call allStops " + request.getRequestURI() + " " + request.getRequestURL());
                     Session session = DatabaseConnector.getSession();
@@ -186,6 +223,10 @@ public class DeviceAPI extends HttpServlet {
 
     }
 
+    public double round(Double value){
+        return (Math.round(value * 10000) / 10000);
+    }
+    
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         System.out.println("[GET]");
@@ -256,6 +297,5 @@ public class DeviceAPI extends HttpServlet {
             return o1.getStopTime().getArrivalTime().compareTo(o2.getStopTime().getArrivalTime());
         }
     }
-
 
 }
