@@ -66,8 +66,8 @@ public class VehicleAPI extends HttpServlet {
         switch (request.getRequestURI()) {
             case "/api/vehicle/init":
 
-                Float lat = Float.parseFloat(request.getParameter("lat"));
-                Float lon = Float.parseFloat(request.getParameter("lon"));
+                Double lat = Double.parseDouble(request.getParameter("lat"));
+                Double lon = Double.parseDouble(request.getParameter("lon"));
 
                 session = DatabaseConnector.getSession();
                 transaction = session.beginTransaction();
@@ -111,8 +111,8 @@ public class VehicleAPI extends HttpServlet {
                 TripPositions tripPosition = (TripPositions) session.get(TripPositions.class, new GtfsTripsId(agencyId, request.getParameter("gtfs_trip_id")));
 
                 if (tripPosition == null) {
-                    tripPosition.setLat(Float.parseFloat(request.getParameter("lat")));
-                    tripPosition.setLon(Float.parseFloat(request.getParameter("lon")));
+                    tripPosition.setLat(Double.parseDouble(request.getParameter("lat")));
+                    tripPosition.setLon(Double.parseDouble(request.getParameter("lon")));
                     tripPosition.setDelay(Integer.parseInt(request.getParameter("delay")));
                     tripPosition.setSpeed(Double.parseDouble(request.getParameter("spd")));
                     tripPosition.setAccuracy(Double.parseDouble(request.getParameter("acc")));

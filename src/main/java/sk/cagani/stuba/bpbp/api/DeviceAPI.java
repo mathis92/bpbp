@@ -28,8 +28,10 @@ import org.slf4j.LoggerFactory;
 import sk.cagani.stuba.bpbp.device.RouteData;
 import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
 import sk.cagani.stuba.bpbp.utilities.Utils;
+import stuba.bpbphibernatemapper.GtfsRoutes;
 import stuba.bpbphibernatemapper.GtfsStopTimes;
 import stuba.bpbphibernatemapper.GtfsStops;
+import stuba.bpbphibernatemapper.GtfsTrips;
 import stuba.bpbphibernatemapper.TripPositions;
 
 /*
