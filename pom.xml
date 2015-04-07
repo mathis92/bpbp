@@ -184,14 +184,14 @@
             <type>jar</type>
         </dependency>
         <dependency>
-            <groupId>stuba</groupId>
-            <artifactId>BpbpHibernateMapper</artifactId>
-            <version>1.0</version>
-        </dependency>
-        <dependency>
             <groupId>joda-time</groupId>
             <artifactId>joda-time</artifactId>
             <version>2.7</version>
+        </dependency>
+        <dependency>
+            <groupId>stuba</groupId>
+            <artifactId>BPbpDatabaseMapper</artifactId>
+            <version>1.0</version>
         </dependency>
     </dependencies>
     

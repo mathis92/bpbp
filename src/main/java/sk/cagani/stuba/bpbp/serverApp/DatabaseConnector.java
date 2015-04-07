@@ -32,8 +32,8 @@ import org.hibernate.criterion.Restrictions;
 
 import org.slf4j.LoggerFactory;
 import sk.cagani.stuba.bpbp.utilities.Utils;
-import stuba.bpbphibernatemapper.GtfsStopTimes;
-import stuba.bpbphibernatemapper.GtfsStops;
+import stuba.bpbpdatabasemapper.GtfsStopTimes;
+import stuba.bpbpdatabasemapper.GtfsStops;
 
 /**
  *
@@ -47,7 +47,7 @@ public class DatabaseConnector {
     public DatabaseConnector() {
         Configuration configuration = new Configuration();
         configuration.configure("hibernate.cfg.xml");
-        configuration.addJar(new File("/home/debian/BPbp/target/lib/BpbpHibernateMapper-1.0.jar"));
+        configuration.addJar(new File("/home/debian/BPbp/target/lib/BPbpDatabaseMapper-1.0.jar"));
         StandardServiceRegistryBuilder ssrb = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
         sessionFactory = configuration.buildSessionFactory(ssrb.build());
     }

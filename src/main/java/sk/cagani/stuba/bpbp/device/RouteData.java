@@ -6,10 +6,10 @@
 package sk.cagani.stuba.bpbp.device;
 
 import java.util.Objects;
-import stuba.bpbphibernatemapper.GtfsRoutes;
-import stuba.bpbphibernatemapper.GtfsStopTimes;
-import stuba.bpbphibernatemapper.GtfsTrips;
-import stuba.bpbphibernatemapper.TripPositions;
+import stuba.bpbpdatabasemapper.GtfsRoutes;
+import stuba.bpbpdatabasemapper.GtfsStopTimes;
+import stuba.bpbpdatabasemapper.GtfsTrips;
+import stuba.bpbpdatabasemapper.TripPositions;
 
 /**
  *

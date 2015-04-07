@@ -23,14 +23,14 @@ import org.hibernate.criterion.Restrictions;
 import org.slf4j.LoggerFactory;
 import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
 import sk.cagani.stuba.bpbp.utilities.Utils;
-import stuba.bpbphibernatemapper.GtfsAgencies;
-import stuba.bpbphibernatemapper.GtfsStopTimes;
-import stuba.bpbphibernatemapper.GtfsStops;
-import stuba.bpbphibernatemapper.GtfsTrips;
-import stuba.bpbphibernatemapper.GtfsTripsId;
-import stuba.bpbphibernatemapper.Poi;
-import stuba.bpbphibernatemapper.PoisInRoutes;
-import stuba.bpbphibernatemapper.TripPositions;
+import stuba.bpbpdatabasemapper.GtfsAgencies;
+import stuba.bpbpdatabasemapper.GtfsStopTimes;
+import stuba.bpbpdatabasemapper.GtfsStops;
+import stuba.bpbpdatabasemapper.GtfsTrips;
+import stuba.bpbpdatabasemapper.GtfsTripsId;
+import stuba.bpbpdatabasemapper.Poi;
+import stuba.bpbpdatabasemapper.PoisInRoutes;
+import stuba.bpbpdatabasemapper.TripPositions;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -111,40 +111,42 @@ public class VehicleAPI extends HttpServlet {
 
                 GtfsTrips trip = (GtfsTrips) sessionUpdateLocation.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("trip_id")));
                 System.out.println("trip: " + trip.getId().getId());
-                
-                 TripPositions tripPosition = null;
-                 List<TripPositions> tripPositionList = sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", trip)).list();
-                 //new GtfsTrips(new GtfsTripsId(agencyId, request.getParameter("trip_id")))
-                 if (!tripPositionList.isEmpty()) {
-                 tripPosition = tripPositionList.get(0);
-                 }
-                 
-                //TripPositions tripPosition = (TripPositions) sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", trip)).uniqueResult();
-                System.out.println("tripPosition: " + tripPosition);                
-                
+/*
+                TripPositions tripPosition = null;
+                List<TripPositions> tripPositionList = sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", trip)).list();
+                //new GtfsTrips(new GtfsTripsId(agencyId, request.getParameter("trip_id")))
+                if (!tripPositionList.isEmpty()) {
+                    tripPosition = tripPositionList.get(0);
+                }
+*/
+                TripPositions tripPosition = (TripPositions) sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", trip)).uniqueResult();
+                System.out.println("tripPosition: " + tripPosition);
+
                 System.out.println(Double.parseDouble(request.getParameter("lat")) + " "
                         + Double.parseDouble(request.getParameter("lon")) + " "
-                        + Integer.parseInt(request.getParameter("delay"))+ " "
+                        + Integer.parseInt(request.getParameter("delay")) + " "
                         + Double.parseDouble(request.getParameter("spd")) + " "
                         + Double.parseDouble(request.getParameter("acc")));
-                
+
                 if (tripPosition == null) {
                     tripPosition = new TripPositions(
                             trip,
                             Double.parseDouble(request.getParameter("lat")),
                             Double.parseDouble(request.getParameter("lon")),
-                            Integer.parseInt(request.getParameter("delay")),
                             Double.parseDouble(request.getParameter("spd")),
-                            Double.parseDouble(request.getParameter("acc")));
+                            Double.parseDouble(request.getParameter("acc")),
+                            Integer.parseInt(request.getParameter("delay")),
+                            "a");
                 } else {
                     tripPosition.setLat(Double.parseDouble(request.getParameter("lat")));
                     tripPosition.setLon(Double.parseDouble(request.getParameter("lon")));
                     tripPosition.setDelay(Integer.parseInt(request.getParameter("delay")));
                     tripPosition.setSpeed(Double.parseDouble(request.getParameter("spd")));
                     tripPosition.setAccuracy(Double.parseDouble(request.getParameter("acc")));
+                    tripPosition.setModifiedAt(null);
                 }
 
-                sessionUpdateLocation.save(tripPosition);
+                sessionUpdateLocation.saveOrUpdate(tripPosition);
 
                 transactionUpdateLocation.commit();
                 sessionUpdateLocation.close();

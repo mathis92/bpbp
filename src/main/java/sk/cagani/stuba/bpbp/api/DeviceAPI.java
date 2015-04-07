@@ -28,11 +28,11 @@ import org.slf4j.LoggerFactory;
 import sk.cagani.stuba.bpbp.device.RouteData;
 import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
 import sk.cagani.stuba.bpbp.utilities.Utils;
-import stuba.bpbphibernatemapper.GtfsRoutes;
-import stuba.bpbphibernatemapper.GtfsStopTimes;
-import stuba.bpbphibernatemapper.GtfsStops;
-import stuba.bpbphibernatemapper.GtfsTrips;
-import stuba.bpbphibernatemapper.TripPositions;
+import stuba.bpbpdatabasemapper.GtfsRoutes;
+import stuba.bpbpdatabasemapper.GtfsStopTimes;
+import stuba.bpbpdatabasemapper.GtfsStops;
+import stuba.bpbpdatabasemapper.GtfsTrips;
+import stuba.bpbpdatabasemapper.TripPositions;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -136,7 +136,7 @@ public class DeviceAPI extends HttpServlet {
                     
                    
                     System.out.println("lat " + (latitude - accLat) + " " + (latitude + accLat) + " lon " +  (longitude - accLon) +" " + (longitude + accLon));
-                    List<TripPositions> tripPositionsList = session.createCriteria(TripPositions.class).add(Restrictions.between("lat", round(latitude + accLat),round(latitude - accLat) )).list();//.add(Restrictions.between("lon", round(longitude + accLon),round(longitude - accLon))).list();
+                    List<TripPositions> tripPositionsList = session.createCriteria(TripPositions.class).add(Restrictions.between("lat", latitude - accLat, latitude + accLat)).add(Restrictions.between("lon", longitude - accLon, longitude + accLon)).list();
                     JsonArrayBuilder vehicleJAB = Json.createArrayBuilder();
                     System.out.println(tripPositionsList.size());
                     for (TripPositions tripPosition : tripPositionsList) {

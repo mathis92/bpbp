@@ -12,7 +12,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeConstants;
 import org.joda.time.Duration;
 import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
-import stuba.bpbphibernatemapper.GtfsCalendarDates;
+import stuba.bpbpdatabasemapper.GtfsCalendarDates;
 
 /**
  *
