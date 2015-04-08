@@ -23,12 +23,16 @@ import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonWriter;
 import javax.json.stream.JsonGenerator;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.jpa.internal.EntityManagerFactoryImpl;
+import org.hibernate.stat.Statistics;
 
 import org.slf4j.LoggerFactory;
 import sk.cagani.stuba.bpbp.utilities.Utils;
@@ -43,6 +47,7 @@ public class DatabaseConnector {
 
     private final org.slf4j.Logger logger = LoggerFactory.getLogger(DatabaseConnector.class);
     private static SessionFactory sessionFactory;
+    private static Statistics stats;
 
     public DatabaseConnector() {
         Configuration configuration = new Configuration();
@@ -50,19 +55,25 @@ public class DatabaseConnector {
         configuration.addJar(new File("/home/debian/BPbp/target/lib/BPbpDatabaseMapper-1.0.jar"));
         StandardServiceRegistryBuilder ssrb = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
         sessionFactory = configuration.buildSessionFactory(ssrb.build());
+        stats = sessionFactory.getStatistics();
+        stats.setStatisticsEnabled(true);
+    }
+
+    public static Statistics getStatistics() {
+        return stats;
     }
 
     public static Session getSession() {
         return sessionFactory.openSession();
     }
 
-    public void writeStopsToFile(){
+    public void writeStopsToFile() {
         FileOutputStream fos = null;
         try {
             Map<String, Object> jwConfig = new HashMap<>();
             jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
             fos = new FileOutputStream("/home/debian/allStops.txt");
-            JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(fos,Charset.forName("UTF-8"));
+            JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(fos, Charset.forName("UTF-8"));
             Session session = DatabaseConnector.getSession();
             List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class).list();
             session.getTransaction().commit(); //closes transaction
@@ -92,12 +103,9 @@ public class DatabaseConnector {
                 Logger.getLogger(DatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-                    
-                   
-                    
+
     }
-    
-    
+
     public void testConnection() throws Exception {
         System.out.println("IDEM TESTUVAC");
         Session session = getSession();
@@ -132,7 +140,7 @@ public class DatabaseConnector {
             List<GtfsStopTimes> stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight.intValue(), secondsSinceMidnight.intValue() + 1200)).addOrder(Order.asc("arrivalTime")).list();
             for (GtfsStopTimes stopTimes : stopTimesList) {
                 if (stopTimes.getGtfsTrips().getServiceIdId().equals("Prac.dny_0")) {
-                    System.out.println(stopTimes.getGtfsTrips().getGtfsRoutes().getShortName() + " " + stop.getName() + " "+ stopTimes.getGtfsTrips().getTripHeadsign() + " " + Utils.secsToHMS(stopTimes.getArrivalTime()));
+                    System.out.println(stopTimes.getGtfsTrips().getGtfsRoutes().getShortName() + " " + stop.getName() + " " + stopTimes.getGtfsTrips().getTripHeadsign() + " " + Utils.secsToHMS(stopTimes.getArrivalTime()));
                 }
             }
         }
@@ -140,5 +148,4 @@ public class DatabaseConnector {
 
     }
 
-    
 }

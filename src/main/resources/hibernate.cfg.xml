@@ -13,6 +13,6 @@
         <property name="connection.autoReconnect">true</property>
         <property name="connection.autoReconnectForPools">true</property>
         <property name="connection.is-connection-validation-required">true</property>
-        <property name="connection.pool_size">30</property>
+        <property name="connection.pool_size">1000</property>
     </session-factory>
 </hibernate-configuration>

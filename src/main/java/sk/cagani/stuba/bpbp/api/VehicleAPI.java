@@ -17,6 +17,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.criterion.Restrictions;
@@ -49,15 +50,18 @@ public class VehicleAPI extends HttpServlet {
     private String agencyId;
 
     public VehicleAPI() {
-        agencyId = ((GtfsAgencies) DatabaseConnector.getSession().createCriteria(GtfsAgencies.class).list().get(0)).getId();
+        Session sessionAgencyId = DatabaseConnector.getSession();
+        Transaction sessionAgencyIdTransaction = sessionAgencyId.beginTransaction();
+        agencyId = ((GtfsAgencies) sessionAgencyId.createCriteria(GtfsAgencies.class).list().get(0)).getId();
+        sessionAgencyIdTransaction.commit();
+        sessionAgencyId.close();
         System.out.println("\n\nagencyId: " + agencyId + "\n");
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        System.out.print("[POST]  ");
-        //System.out.print("[POST]  " + request.getRequestURI());
-
+        System.out.println("\n\n" + DatabaseConnector.getStatistics() + "\n\n");
+        //      System.out.print("[POST]  ");
         response.setContentType("text/json");
         Map<String, Boolean> jwConfig = new HashMap<>();
         jwConfig.put(JsonGenerator.PRETTY_PRINTING, Boolean.TRUE);
@@ -104,52 +108,66 @@ public class VehicleAPI extends HttpServlet {
                 jw.writeObject(possibleTripJO);
                 break;
             case "/api/vehicle/updateLocation":
-                System.out.println("trip id:  " + (request.getParameter("trip_id") == null ? "empty" : request.getParameter("trip_id")));
+             //   System.out.println("trip id:  " + (request.getParameter("trip_id") == null ? "empty" : request.getParameter("trip_id")));
 
                 Session sessionUpdateLocation = DatabaseConnector.getSession();
-                Transaction transactionUpdateLocation = sessionUpdateLocation.beginTransaction();
 
-                GtfsTrips trip = (GtfsTrips) sessionUpdateLocation.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("trip_id")));
-                System.out.println("trip: " + trip.getId().getId());
+                Transaction transaction = null;
+
+                Transaction transactionUpdateLocation = null;
+                try {
+
+                    transactionUpdateLocation = sessionUpdateLocation.beginTransaction();
+                    GtfsTrips trip = (GtfsTrips) sessionUpdateLocation.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("trip_id")));
+             //   System.out.println("trip: " + trip.getId().getId());
 /*
-                TripPositions tripPosition = null;
-                List<TripPositions> tripPositionList = sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", trip)).list();
-                //new GtfsTrips(new GtfsTripsId(agencyId, request.getParameter("trip_id")))
-                if (!tripPositionList.isEmpty()) {
-                    tripPosition = tripPositionList.get(0);
+                     TripPositions tripPosition = null;
+                     List<TripPositions> tripPositionList = sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", trip)).list();
+                     //new GtfsTrips(new GtfsTripsId(agencyId, request.getParameter("trip_id")))
+                     if (!tripPositionList.isEmpty()) {
+                     tripPosition = tripPositionList.get(0);
+                     }
+                     */
+                    TripPositions tripPosition = (TripPositions) sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", trip)).uniqueResult();
+              //  System.out.println("tripPosition: " + tripPosition);
+
+                    /*  System.out.println(Double.parseDouble(request.getParameter("lat")) + " "
+                     + Double.parseDouble(request.getParameter("lon")) + " "
+                     + Integer.parseInt(request.getParameter("delay")) + " "
+                     + Double.parseDouble(request.getParameter("spd")) + " "
+                     + Double.parseDouble(request.getParameter("acc")));
+                     */
+                    if (tripPosition == null) {
+                        tripPosition = new TripPositions(
+                                trip,
+                                Double.parseDouble(request.getParameter("lat")),
+                                Double.parseDouble(request.getParameter("lon")),
+                                Double.parseDouble(request.getParameter("spd")),
+                                Double.parseDouble(request.getParameter("acc")),
+                                Integer.parseInt(request.getParameter("delay")),
+                                "a");
+                    } else {
+                        tripPosition.setLat(Double.parseDouble(request.getParameter("lat")));
+                        tripPosition.setLon(Double.parseDouble(request.getParameter("lon")));
+                        tripPosition.setDelay(Integer.parseInt(request.getParameter("delay")));
+                        tripPosition.setSpeed(Double.parseDouble(request.getParameter("spd")));
+                        tripPosition.setAccuracy(Double.parseDouble(request.getParameter("acc")));
+                        tripPosition.setModifiedAt(null);
+                    }
+
+                    sessionUpdateLocation.saveOrUpdate(tripPosition);
+
+                    transactionUpdateLocation.commit();
+
+                } catch (HibernateException | NumberFormatException e) {
+                    if (transactionUpdateLocation != null) {
+                        transactionUpdateLocation.rollback();
+                        throw e;
+                    }
+                } finally {
+                    sessionUpdateLocation.close();
                 }
-*/
-                TripPositions tripPosition = (TripPositions) sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", trip)).uniqueResult();
-                System.out.println("tripPosition: " + tripPosition);
-
-                System.out.println(Double.parseDouble(request.getParameter("lat")) + " "
-                        + Double.parseDouble(request.getParameter("lon")) + " "
-                        + Integer.parseInt(request.getParameter("delay")) + " "
-                        + Double.parseDouble(request.getParameter("spd")) + " "
-                        + Double.parseDouble(request.getParameter("acc")));
-
-                if (tripPosition == null) {
-                    tripPosition = new TripPositions(
-                            trip,
-                            Double.parseDouble(request.getParameter("lat")),
-                            Double.parseDouble(request.getParameter("lon")),
-                            Double.parseDouble(request.getParameter("spd")),
-                            Double.parseDouble(request.getParameter("acc")),
-                            Integer.parseInt(request.getParameter("delay")),
-                            "a");
-                } else {
-                    tripPosition.setLat(Double.parseDouble(request.getParameter("lat")));
-                    tripPosition.setLon(Double.parseDouble(request.getParameter("lon")));
-                    tripPosition.setDelay(Integer.parseInt(request.getParameter("delay")));
-                    tripPosition.setSpeed(Double.parseDouble(request.getParameter("spd")));
-                    tripPosition.setAccuracy(Double.parseDouble(request.getParameter("acc")));
-                    tripPosition.setModifiedAt(null);
-                }
-
-                sessionUpdateLocation.saveOrUpdate(tripPosition);
-
-                transactionUpdateLocation.commit();
-                sessionUpdateLocation.close();
+                //sessionUpdateLocation.close();
 
                 //v buducnosti tu zrob to cekovanie pred zastavkou a potom ak hej, tak treba tie linky najblizsie poslat abo co
                 break;

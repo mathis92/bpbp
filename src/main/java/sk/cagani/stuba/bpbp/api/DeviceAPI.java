@@ -50,7 +50,8 @@ public class DeviceAPI extends HttpServlet {
     // private Session session;
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        System.out.println("[POST]");
+       // System.out.println("[POST]");
+        System.out.println("\n\n" + DatabaseConnector.getStatistics() + "\n\n");
         response.setContentType("text/json; charset=UTF-8");
         Map<String, Object> jwConfig = new HashMap<>();
         jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
@@ -125,6 +126,7 @@ public class DeviceAPI extends HttpServlet {
                     }
                     break;
                 }
+                
                 case "vehiclesPositions": {
                     logger.debug("in api call vehiclePositions " + request.getRequestURI() + " " + request.getRequestURL());
                     Session session = DatabaseConnector.getSession();
