@@ -140,7 +140,7 @@ public class DeviceAPI extends HttpServlet {
                     double southLon = Double.parseDouble(request.getParameter("southLon"));
 
                     System.out.println("lat " + (westLat) + " " + (eastLat) + " lon " + (northLon) + " " + (southLon));
-                    List<TripPositions> tripPositionsList = session.createCriteria(TripPositions.class).add(Restrictions.between("lat", westLat, eastLat)).add(Restrictions.between("lon", southLon, northLon)).list();
+                    List<TripPositions> tripPositionsList = session.createCriteria(TripPositions.class).add(Restrictions.between("lat", westLat, eastLat)).add(Restrictions.between("lon", southLon, northLon)).add(Restrictions.eq("state", "a")).list();
                     JsonArrayBuilder vehicleJAB = Json.createArrayBuilder();
                     System.out.println(tripPositionsList.size());
                     for (TripPositions tripPosition : tripPositionsList) {
@@ -148,6 +148,7 @@ public class DeviceAPI extends HttpServlet {
                         //   GtfsStopTimes stopTime = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsTrips", trip)).list().get(0);
                         GtfsRoutes route = trip.getGtfsRoutes();
                         JsonObjectBuilder vehicleJOB = Json.createObjectBuilder();
+                        vehicleJOB.add("id", route.getId().getId());
                         vehicleJOB.add("shortName", route.getShortName());
                         vehicleJOB.add("vehicleType", route.getType());
                         vehicleJOB.add("lon", tripPosition.getLon());
