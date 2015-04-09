@@ -88,6 +88,7 @@ public class VehicleAPI extends HttpServlet {
                                 if (!stop.getName().equals(stopTime.getGtfsTrips().getTripHeadsign())) {
                                     JsonObjectBuilder tripJOB = Json.createObjectBuilder();
                                     tripJOB.add("routeName", stopTime.getGtfsTrips().getGtfsRoutes().getShortName());
+                                    tripJOB.add("routeType", stopTime.getGtfsTrips().getGtfsRoutes().getType());
                                     tripJOB.add("tripId", stopTime.getGtfsTrips().getId().getId());
                                     tripJOB.add("departureTime", stopTime.getDepartureTime());
                                     tripJOB.add("headSign", stopTime.getGtfsTrips().getTripHeadsign());
