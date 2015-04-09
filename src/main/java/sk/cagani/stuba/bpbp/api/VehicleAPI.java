@@ -77,13 +77,14 @@ public class VehicleAPI extends HttpServlet {
 
                 List<GtfsStops> gtfsStops = sessionInit.createCriteria(GtfsStops.class)
                         .add(Restrictions.between("lat", lat - 0.0005, lat + 0.0005))
-                        .add(Restrictions.between("lon", lon - 0.0005, lon + 0.0005)).list();
+                        .add(Restrictions.between("lon", lon - 0.0005, lon + 0.0005))
+                        .list();
 
                 JsonArrayBuilder tripsJAB = Json.createArrayBuilder();
                 for (GtfsStops stop : gtfsStops) {
                     for (GtfsStopTimes stopTime : (Set<GtfsStopTimes>) stop.getGtfsStopTimeses()) {
-                        int secsFromMidnight = 44400;//Utils.getSecondsFromMidnight();
-                        if (stopTime.getDepartureTime() > secsFromMidnight - 300 && stopTime.getDepartureTime() < secsFromMidnight + 300) {
+                        int secsFromMidnight = Utils.getSecondsFromMidnight();
+                        if (stopTime.getDepartureTime() > secsFromMidnight - 600 && stopTime.getDepartureTime() < secsFromMidnight + 600) {
                             if (stopTime.getGtfsTrips().getServiceIdId().equals("Prac.dny_0"/*Utils.getActualServiceId()*/)) {
                                 if (!stop.getName().equals(stopTime.getGtfsTrips().getTripHeadsign())) {
                                     JsonObjectBuilder tripJOB = Json.createObjectBuilder();
@@ -109,35 +110,14 @@ public class VehicleAPI extends HttpServlet {
                 jw.writeObject(possibleTripJO);
                 break;
             case "/api/vehicle/updateLocation":
-             //   System.out.println("trip id:  " + (request.getParameter("trip_id") == null ? "empty" : request.getParameter("trip_id")));
-
                 Session sessionUpdateLocation = DatabaseConnector.getSession();
-
-                Transaction transaction = null;
-
                 Transaction transactionUpdateLocation = null;
                 try {
-
                     transactionUpdateLocation = sessionUpdateLocation.beginTransaction();
                     GtfsTrips trip = (GtfsTrips) sessionUpdateLocation.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("trip_id")));
-             //   System.out.println("trip: " + trip.getId().getId());
-/*
-                     TripPositions tripPosition = null;
-                     List<TripPositions> tripPositionList = sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", trip)).list();
-                     //new GtfsTrips(new GtfsTripsId(agencyId, request.getParameter("trip_id")))
-                     if (!tripPositionList.isEmpty()) {
-                     tripPosition = tripPositionList.get(0);
-                     }
-                     */
-                    TripPositions tripPosition = (TripPositions) sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", trip)).uniqueResult();
-              //  System.out.println("tripPosition: " + tripPosition);
 
-                    /*  System.out.println(Double.parseDouble(request.getParameter("lat")) + " "
-                     + Double.parseDouble(request.getParameter("lon")) + " "
-                     + Integer.parseInt(request.getParameter("delay")) + " "
-                     + Double.parseDouble(request.getParameter("spd")) + " "
-                     + Double.parseDouble(request.getParameter("acc")));
-                     */
+                    TripPositions tripPosition = (TripPositions) sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", trip)).uniqueResult();
+
                     if (tripPosition == null) {
                         tripPosition = new TripPositions(
                                 trip,
@@ -156,11 +136,10 @@ public class VehicleAPI extends HttpServlet {
                         tripPosition.setState(request.getParameter("state"));
                         tripPosition.setModifiedAt(null);
                     }
-
+                    
                     sessionUpdateLocation.saveOrUpdate(tripPosition);
-
                     transactionUpdateLocation.commit();
-
+                    
                 } catch (HibernateException | NumberFormatException e) {
                     if (transactionUpdateLocation != null) {
                         transactionUpdateLocation.rollback();
@@ -169,7 +148,6 @@ public class VehicleAPI extends HttpServlet {
                 } finally {
                     sessionUpdateLocation.close();
                 }
-                //sessionUpdateLocation.close();
 
                 //v buducnosti tu zrob to cekovanie pred zastavkou a potom ak hej, tak treba tie linky najblizsie poslat abo co
                 break;

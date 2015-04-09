@@ -148,6 +148,7 @@ public class DeviceAPI extends HttpServlet {
                         //   GtfsStopTimes stopTime = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsTrips", trip)).list().get(0);
                         GtfsRoutes route = trip.getGtfsRoutes();
                         JsonObjectBuilder vehicleJOB = Json.createObjectBuilder();
+                        vehicleJOB.add("id", route.getId().getId());
                         vehicleJOB.add("shortName", route.getShortName());
                         vehicleJOB.add("vehicleType", route.getType());
                         vehicleJOB.add("lon", tripPosition.getLon());
