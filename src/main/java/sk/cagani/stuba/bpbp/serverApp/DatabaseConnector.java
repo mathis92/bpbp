@@ -23,15 +23,12 @@ import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonWriter;
 import javax.json.stream.JsonGenerator;
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
-import org.hibernate.jpa.internal.EntityManagerFactoryImpl;
 import org.hibernate.stat.Statistics;
 
 import org.slf4j.LoggerFactory;
