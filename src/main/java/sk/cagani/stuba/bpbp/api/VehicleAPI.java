@@ -60,7 +60,7 @@ public class VehicleAPI extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        System.out.println("\n\n" + DatabaseConnector.getStatistics() + "\n\n");
+     //   System.out.println("\n\n" + DatabaseConnector.getStatistics() + "\n\n");
         //      System.out.print("[POST]  ");
         response.setContentType("text/json");
         Map<String, Boolean> jwConfig = new HashMap<>();
@@ -145,13 +145,14 @@ public class VehicleAPI extends HttpServlet {
                                 Double.parseDouble(request.getParameter("spd")),
                                 Double.parseDouble(request.getParameter("acc")),
                                 Integer.parseInt(request.getParameter("delay")),
-                                "a");
+                                request.getParameter("state"));
                     } else {
                         tripPosition.setLat(Double.parseDouble(request.getParameter("lat")));
                         tripPosition.setLon(Double.parseDouble(request.getParameter("lon")));
                         tripPosition.setDelay(Integer.parseInt(request.getParameter("delay")));
                         tripPosition.setSpeed(Double.parseDouble(request.getParameter("spd")));
                         tripPosition.setAccuracy(Double.parseDouble(request.getParameter("acc")));
+                        tripPosition.setState(request.getParameter("state"));
                         tripPosition.setModifiedAt(null);
                     }
 

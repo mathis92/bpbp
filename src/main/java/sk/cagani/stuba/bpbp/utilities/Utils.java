@@ -34,6 +34,7 @@ public class Utils implements Runnable {
             List<GtfsCalendarDates> calendarDatesList = session.createCriteria(GtfsCalendarDates.class).addOrder(Order.asc("date")).list();
 
             for (GtfsCalendarDates date : calendarDatesList) {
+                //System.out.println("current Date " + date.getDate() + " SDF date " + sdf.format(new Date()));
                 if (date.getDate().equals(sdf.format(new Date()))) {
                     serviceId = date.getServiceIdId();
                     break;
@@ -58,7 +59,7 @@ public class Utils implements Runnable {
                     serviceId = "Neděle+Sv_2";
                 }                
             }
-
+        //    System.out.println(serviceId + " CURRENT SERVICE ID");
             try {
                 Thread.sleep(60000);
             } catch (InterruptedException ex) {

@@ -50,7 +50,7 @@ public class DeviceAPI extends HttpServlet {
     // private Session session;
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-       // System.out.println("[POST]");
+        // System.out.println("[POST]");
         System.out.println("\n\n" + DatabaseConnector.getStatistics() + "\n\n");
         response.setContentType("text/json; charset=UTF-8");
         Map<String, Object> jwConfig = new HashMap<>();
@@ -66,7 +66,7 @@ public class DeviceAPI extends HttpServlet {
                         String requestStopName = request.getParameter("stopName");
 
                         List<RouteData> routeList = new ArrayList<>();
-                        
+
                         Session session = DatabaseConnector.getSession();
                         Transaction tx = null;
                         tx = session.beginTransaction(); //open the transaction
@@ -76,11 +76,14 @@ public class DeviceAPI extends HttpServlet {
                             List<GtfsStopTimes> stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight, secondsSinceMidnight + 1200)).addOrder(Order.asc("arrivalTime")).list();
                             for (GtfsStopTimes stopTimes : stopTimesList) {
                                 if (stopTimes.getGtfsTrips().getServiceIdId().equals(Utils.getActualServiceId())) {
-                                    List<TripPositions> tripPositionList = session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", stopTimes.getGtfsTrips())).addOrder(Order.desc("id")).list();
+                                    System.out.println(stopTimes.getGtfsTrips().getId().getId());
+                                    List<TripPositions> tripPositionList = session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", stopTimes.getGtfsTrips())).list();
                                     TripPositions lastPosition;
                                     if (!tripPositionList.isEmpty()) {
                                         lastPosition = tripPositionList.get(0);
+                                        System.out.println(lastPosition.getDelay());
                                     } else {
+                                        System.out.println("empty trip positions");
                                         lastPosition = null;
                                     }
                                     Integer delay = 0;
@@ -126,19 +129,18 @@ public class DeviceAPI extends HttpServlet {
                     }
                     break;
                 }
-                
+
                 case "vehiclesPositions": {
                     logger.debug("in api call vehiclePositions " + request.getRequestURI() + " " + request.getRequestURL());
                     Session session = DatabaseConnector.getSession();
                     Transaction tx = session.beginTransaction();
-                    double longitude = Double.parseDouble(request.getParameter("lon"));
-                    double latitude = Double.parseDouble(request.getParameter("lat"));
-                    double accLat = Double.parseDouble(request.getParameter("accLat"));
-                    double accLon = Double.parseDouble(request.getParameter("accLon"));
-                    
-                   
-                    System.out.println("lat " + (latitude - accLat) + " " + (latitude + accLat) + " lon " +  (longitude - accLon) +" " + (longitude + accLon));
-                    List<TripPositions> tripPositionsList = session.createCriteria(TripPositions.class).add(Restrictions.between("lat", latitude - accLat, latitude + accLat)).add(Restrictions.between("lon", longitude - accLon, longitude + accLon)).list();
+                    double northLon = Double.parseDouble(request.getParameter("northLon"));
+                    double eastLat = Double.parseDouble(request.getParameter("eastLat"));
+                    double westLat = Double.parseDouble(request.getParameter("westLat"));
+                    double southLon = Double.parseDouble(request.getParameter("southLon"));
+
+                    System.out.println("lat " + (westLat) + " " + (eastLat) + " lon " + (northLon) + " " + (southLon));
+                    List<TripPositions> tripPositionsList = session.createCriteria(TripPositions.class).add(Restrictions.between("lat", westLat, eastLat)).add(Restrictions.between("lon", southLon, northLon)).list();
                     JsonArrayBuilder vehicleJAB = Json.createArrayBuilder();
                     System.out.println(tripPositionsList.size());
                     for (TripPositions tripPosition : tripPositionsList) {
@@ -204,10 +206,10 @@ public class DeviceAPI extends HttpServlet {
 
     }
 
-    public double round(Double value){
+    public double round(Double value) {
         return (Math.round(value * 10000) / 10000);
     }
-    
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         System.out.println("[GET]");
