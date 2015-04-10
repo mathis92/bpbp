@@ -20,6 +20,7 @@ import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 import org.slf4j.LoggerFactory;
 import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
@@ -175,16 +176,16 @@ public class VehicleAPI extends HttpServlet {
                 /*
                  get all stops
                  */
+                List<GtfsStopTimes> stopTimesList = session1.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsTrips", gtfsTrip)).addOrder(Order.asc("stopSequence")).list();
                 JsonArrayBuilder stopsJAB = Json.createArrayBuilder();
-                for (GtfsStopTimes gst : (Set<GtfsStopTimes>) gtfsTrip.getGtfsStopTimeses()) {
+                for (GtfsStopTimes gst : stopTimesList) {
                     JsonObjectBuilder stopsJOB = Json.createObjectBuilder();
                     stopsJOB.add("name", gst.getGtfsStops().getName());
                     stopsJOB.add("lat", gst.getGtfsStops().getLat());
                     stopsJOB.add("lon", gst.getGtfsStops().getLon());
                     stopsJOB.add("zoneId", gst.getGtfsStops().getZoneId());
                     stopsJOB.add("arrivalTime", gst.getArrivalTime());
-                    stopsJOB.add("isOnRequest", gst.getPickupType().equals(3) ? "true" : "false");
-                    stopsJOB.add("stopSequence", gst.getStopSequence());
+                    stopsJOB.add("isOnRequest", gst.getPickupType().equals(3) ? "true" : "false");                    
 
                     stopsJAB.add(stopsJOB);
                 }
