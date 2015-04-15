@@ -56,7 +56,6 @@ public class VehicleAPI extends HttpServlet {
         agencyId = ((GtfsAgencies) sessionAgencyId.createCriteria(GtfsAgencies.class).list().get(0)).getId();
         sessionAgencyIdTransaction.commit();
         sessionAgencyId.close();
-        System.out.println("\n\nagencyId: " + agencyId + "\n");
     }
 
     @Override
@@ -70,6 +69,7 @@ public class VehicleAPI extends HttpServlet {
 
         switch (request.getRequestURI()) {
             case "/api/vehicle/init":
+                System.out.println("[Init] position: " + request.getParameter("lat") + "  " + request.getParameter("lon"));
                 Session sessionInit = DatabaseConnector.getSession();
                 Transaction transactionInit = sessionInit.beginTransaction();
 
@@ -107,16 +107,15 @@ public class VehicleAPI extends HttpServlet {
                 JsonObjectBuilder possibleTripJOB = Json.createObjectBuilder();
                 possibleTripJOB.add("possibleTripList", tripsJAB);
                 JsonObject possibleTripJO = possibleTripJOB.build();
-                System.out.println(possibleTripJO.toString());
                 jw.writeObject(possibleTripJO);
                 break;
             case "/api/vehicle/updateLocation":
+                System.out.println("[Update location] tripId: " + request.getParameter("tripId"));
                 Session sessionUpdateLocation = DatabaseConnector.getSession();
                 Transaction transactionUpdateLocation = null;
                 try {
                     transactionUpdateLocation = sessionUpdateLocation.beginTransaction();
-                    GtfsTrips trip = (GtfsTrips) sessionUpdateLocation.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("trip_id")));
-
+                    GtfsTrips trip = (GtfsTrips) sessionUpdateLocation.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("tripId")));                   
                     TripPositions tripPosition = (TripPositions) sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", trip)).uniqueResult();
 
                     if (tripPosition == null) {
@@ -153,14 +152,13 @@ public class VehicleAPI extends HttpServlet {
                 //v buducnosti tu zrob to cekovanie pred zastavkou a potom ak hej, tak treba tie linky najblizsie poslat abo co
                 break;
             case "/api/vehicle/getStopsAndPoi":
-                System.out.println("tripId: " + request.getParameter("trip_id"));
-
-                Session session1 = DatabaseConnector.getSession();
-                Transaction tx1 = session1.beginTransaction();
+                System.out.println("[Get stops and poi] tripId: " + request.getParameter("tripId"));
+                Session sessionGetStopsAndPoi = DatabaseConnector.getSession();
+                Transaction transactionGetStopsAndPoi = sessionGetStopsAndPoi.beginTransaction();
                 /*
                  get all POI
                  */
-                GtfsTrips gtfsTrip = (GtfsTrips) session1.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("trip_id")));
+                GtfsTrips gtfsTrip = (GtfsTrips) sessionGetStopsAndPoi.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("tripId")));
 
                 JsonArrayBuilder poiJAB = Json.createArrayBuilder();
                 for (PoisInRoutes pir : (Set<PoisInRoutes>) gtfsTrip.getGtfsRoutes().getPoisInRouteses()) {
@@ -176,7 +174,7 @@ public class VehicleAPI extends HttpServlet {
                 /*
                  get all stops
                  */
-                List<GtfsStopTimes> stopTimesList = session1.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsTrips", gtfsTrip)).addOrder(Order.asc("stopSequence")).list();
+                List<GtfsStopTimes> stopTimesList = sessionGetStopsAndPoi.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsTrips", gtfsTrip)).addOrder(Order.asc("stopSequence")).list();
                 JsonArrayBuilder stopsJAB = Json.createArrayBuilder();
                 for (GtfsStopTimes gst : stopTimesList) {
                     JsonObjectBuilder stopsJOB = Json.createObjectBuilder();
@@ -190,8 +188,8 @@ public class VehicleAPI extends HttpServlet {
                     stopsJAB.add(stopsJOB);
                 }
 
-                tx1.commit();
-                session1.close();
+                transactionGetStopsAndPoi.commit();
+                sessionGetStopsAndPoi.close();
 
                 JsonObjectBuilder tripInfoJOB = Json.createObjectBuilder();
                 tripInfoJOB.add("poiList", poiJAB);
