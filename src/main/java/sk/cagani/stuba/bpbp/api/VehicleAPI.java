@@ -84,7 +84,7 @@ public class VehicleAPI extends HttpServlet {
                 JsonArrayBuilder tripsJAB = Json.createArrayBuilder();
                 for (GtfsStops stop : gtfsStops) {
                     for (GtfsStopTimes stopTime : (Set<GtfsStopTimes>) stop.getGtfsStopTimeses()) {
-                        int secsFromMidnight = Utils.getSecondsFromMidnight();
+                        int secsFromMidnight = 46000;//Utils.getSecondsFromMidnight();
                         if (stopTime.getDepartureTime() > secsFromMidnight - 600 && stopTime.getDepartureTime() < secsFromMidnight + 600) {
                             if (stopTime.getGtfsTrips().getServiceIdId().equals("Prac.dny_0"/*Utils.getActualServiceId()*/)) {
                                 if (!stop.getName().equals(stopTime.getGtfsTrips().getTripHeadsign())) {
@@ -115,7 +115,7 @@ public class VehicleAPI extends HttpServlet {
                 Transaction transactionUpdateLocation = null;
                 try {
                     transactionUpdateLocation = sessionUpdateLocation.beginTransaction();
-                    GtfsTrips trip = (GtfsTrips) sessionUpdateLocation.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("trip_id")));
+                    GtfsTrips trip = (GtfsTrips) sessionUpdateLocation.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("tripId")));
 
                     TripPositions tripPosition = (TripPositions) sessionUpdateLocation.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", trip)).uniqueResult();
 
@@ -153,14 +153,14 @@ public class VehicleAPI extends HttpServlet {
                 //v buducnosti tu zrob to cekovanie pred zastavkou a potom ak hej, tak treba tie linky najblizsie poslat abo co
                 break;
             case "/api/vehicle/getStopsAndPoi":
-                System.out.println("tripId: " + request.getParameter("trip_id"));
+                System.out.println("tripId: " + request.getParameter("tripId"));
 
                 Session session1 = DatabaseConnector.getSession();
                 Transaction tx1 = session1.beginTransaction();
                 /*
                  get all POI
                  */
-                GtfsTrips gtfsTrip = (GtfsTrips) session1.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("trip_id")));
+                GtfsTrips gtfsTrip = (GtfsTrips) session1.get(GtfsTrips.class, new GtfsTripsId(agencyId, request.getParameter("tripId")));
 
                 JsonArrayBuilder poiJAB = Json.createArrayBuilder();
                 for (PoisInRoutes pir : (Set<PoisInRoutes>) gtfsTrip.getGtfsRoutes().getPoisInRouteses()) {
