@@ -73,15 +73,22 @@ public class DeviceAPI extends HttpServlet {
                         int secondsSinceMidnight = Utils.getSecondsFromMidnight();
                         List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", requestStopName)).list();
                         for (GtfsStops stop : stopList) {
-                            List<GtfsStopTimes> stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight, secondsSinceMidnight + 1200)).addOrder(Order.asc("arrivalTime")).list();
+                            List<GtfsStopTimes> stopTimesList;
+                            if (request.getParameter("count") != null) {
+                                logger.debug("secondsSinceMidnight " + secsToHMS(secondsSinceMidnight) + " " + stop.getName());
+                                stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight, secondsSinceMidnight + 2000)).addOrder(Order.asc("arrivalTime")).setMaxResults(Integer.parseInt(request.getParameter("count"))).list();
+
+                            } else {
+                                stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight, secondsSinceMidnight + 2000)).addOrder(Order.asc("arrivalTime")).list();
+                            }
                             for (GtfsStopTimes stopTimes : stopTimesList) {
                                 if (stopTimes.getGtfsTrips().getServiceIdId().equals(Utils.getActualServiceId())) {
-                                    System.out.println(stopTimes.getGtfsTrips().getId().getId());
+                                  //  System.out.println(stopTimes.getGtfsTrips().getId().getId());
                                     List<TripPositions> tripPositionList = session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", stopTimes.getGtfsTrips())).list();
                                     TripPositions lastPosition;
                                     if (!tripPositionList.isEmpty()) {
                                         lastPosition = tripPositionList.get(0);
-                                        System.out.println(lastPosition.getDelay());
+                                        //System.out.println(lastPosition.getDelay());
                                     } else {
                                         System.out.println("empty trip positions");
                                         lastPosition = null;
