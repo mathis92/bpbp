@@ -84,7 +84,7 @@ public class VehicleAPI extends HttpServlet {
                 JsonArrayBuilder tripsJAB = Json.createArrayBuilder();
                 for (GtfsStops stop : gtfsStops) {
                     for (GtfsStopTimes stopTime : (Set<GtfsStopTimes>) stop.getGtfsStopTimeses()) {
-                        int secsFromMidnight = Utils.getSecondsFromMidnight();
+                        int secsFromMidnight = 44000;//Utils.getSecondsFromMidnight();
                         if (stopTime.getDepartureTime() > secsFromMidnight - 600 && stopTime.getDepartureTime() < secsFromMidnight + 600) {
                             if (stopTime.getGtfsTrips().getServiceIdId().equals("Prac.dny_0"/*Utils.getActualServiceId()*/)) {
                                 if (!stop.getName().equals(stopTime.getGtfsTrips().getTripHeadsign())) {
