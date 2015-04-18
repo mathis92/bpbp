@@ -75,11 +75,11 @@ public class DeviceAPI extends HttpServlet {
                         for (GtfsStops stop : stopList) {
                             List<GtfsStopTimes> stopTimesList;
                             if (request.getParameter("count") != null) {
-                                logger.debug("secondsSinceMidnight " + secsToHMS(secondsSinceMidnight) + " " + stop.getName());
-                                stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight, secondsSinceMidnight + 2000)).addOrder(Order.asc("arrivalTime")).setMaxResults(Integer.parseInt(request.getParameter("count"))).list();
-
+                                System.out.println("secondsSinceMidnight " + secsToHMS(secondsSinceMidnight) + " " + stop.getName());
+                                stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.gt("arrivalTime", secondsSinceMidnight)).addOrder(Order.asc("arrivalTime")).setMaxResults(Integer.parseInt(request.getParameter("count"))).list();
+                                    System.out.println("stopTimesList count " + stopTimesList.size());
                             } else {
-                                stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.between("arrivalTime", secondsSinceMidnight, secondsSinceMidnight + 2000)).addOrder(Order.asc("arrivalTime")).list();
+                                stopTimesList = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).add(Restrictions.gt("arrivalTime", secondsSinceMidnight)).addOrder(Order.asc("arrivalTime")).setMaxResults(15).list();
                             }
                             for (GtfsStopTimes stopTimes : stopTimesList) {
                                 if (stopTimes.getGtfsTrips().getServiceIdId().equals(Utils.getActualServiceId())) {
