@@ -77,13 +77,14 @@ public class VehicleAPI extends HttpServlet {
                 Double lon = Double.parseDouble(request.getParameter("lon"));
 
                 List<GtfsStops> gtfsStops = sessionInit.createCriteria(GtfsStops.class)
-                        .add(Restrictions.between("lat", lat - 0.0005, lat + 0.0005))
-                        .add(Restrictions.between("lon", lon - 0.0005, lon + 0.0005))
+                        .add(Restrictions.between("lat", lat - 0.001, lat + 0.001))
+                        .add(Restrictions.between("lon", lon - 0.001, lon + 0.001))
                         .list();
 
                 JsonArrayBuilder tripsJAB = Json.createArrayBuilder();
                 for (GtfsStops stop : gtfsStops) {
-                    for (GtfsStopTimes stopTime : (Set<GtfsStopTimes>) stop.getGtfsStopTimeses()) {
+                    //List<GtfsStopTimes> stopTimesList = sessionInit.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).addOrder(Order.asc("departureTime")).list();
+                    for (GtfsStopTimes stopTime : (List<GtfsStopTimes>) sessionInit.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).addOrder(Order.asc("departureTime")).list()) {
                         int secsFromMidnight = 44000;//Utils.getSecondsFromMidnight();
                         if (stopTime.getDepartureTime() > secsFromMidnight - 600 && stopTime.getDepartureTime() < secsFromMidnight + 600) {
                             if (stopTime.getGtfsTrips().getServiceIdId().equals("Prac.dny_0"/*Utils.getActualServiceId()*/)) {
