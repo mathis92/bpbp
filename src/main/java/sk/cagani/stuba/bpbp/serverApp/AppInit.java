@@ -25,9 +25,12 @@ public class AppInit {
 
     public static void main(String[] args) throws Exception {       
         DatabaseConnector dc = new DatabaseConnector();
+        
         new Thread(new Utils()).start();
-      //  dc.writeStopsToFile();
+       // dc.writeStopsToFile();
         new AppInit().startServlets();
+        
+       
     }
     
     private void startServlets() throws InterruptedException, Exception {

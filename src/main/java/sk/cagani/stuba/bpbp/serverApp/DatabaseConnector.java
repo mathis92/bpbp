@@ -10,7 +10,10 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -25,16 +28,21 @@ import javax.json.JsonWriter;
 import javax.json.stream.JsonGenerator;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.stat.Statistics;
+import org.hibernate.transform.Transformers;
 
 import org.slf4j.LoggerFactory;
 import sk.cagani.stuba.bpbp.utilities.Utils;
+import stuba.bpbpdatabasemapper.GtfsRoutes;
 import stuba.bpbpdatabasemapper.GtfsStopTimes;
 import stuba.bpbpdatabasemapper.GtfsStops;
+import stuba.bpbpdatabasemapper.GtfsTrips;
 
 /**
  *
@@ -71,26 +79,95 @@ public class DatabaseConnector {
             jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
             fos = new FileOutputStream("/home/debian/allStops.txt");
             JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(fos, Charset.forName("UTF-8"));
-            Session session = DatabaseConnector.getSession();
-            List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class).list();
-            session.getTransaction().commit(); //closes transaction
-            session.close();
+            Session session = getSession();
+            Transaction tx = session.beginTransaction();
+            List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class).addOrder(Order.asc("name")).list();
+
             JsonArrayBuilder stopsJAB = Json.createArrayBuilder();
+            List<StopData> stopDataList = new ArrayList<>();
+
             for (GtfsStops stop : stopsList) {
-                if (stop.getId().getId().endsWith("1")) {
-                    JsonObjectBuilder stopJOB = Json.createObjectBuilder();
-                    stopJOB.add(stop.getId().getClass().getSimpleName(), stop.getId().getId());
-                    stopJOB.add("name", stop.getName());
-                    stopJOB.add("lat", stop.getLat());
-                    stopJOB.add("lon", stop.getLon());
-                    stopsJAB.add(stopJOB);
+                boolean found = false;
+                StopData data = null;
+                for (StopData stopData : stopDataList) {
+                    if (stopData.getStop().getName().equals(stop.getName())) {
+                        data = stopData;
+                        if (stop.getId().getId().endsWith("1")) {
+                            data.stop = stop;
+                        }
+                        found = true;
+                        break;
+                    }
+                }
+                if (data == null) {
+                    data = new StopData();
+                    data.stop = stop;
+                }
+
+                List<GtfsRoutes> routeList = session.createCriteria(GtfsStopTimes.class, "stopTime")
+                        .createAlias("stopTime.gtfsTrips", "trip")
+                        .createAlias("trip.gtfsRoutes", "route")
+                        .add(Restrictions.eq("gtfsStops", stop))
+                        .addOrder(Order.asc("route.shortName"))
+                        .setProjection(Projections.distinct(Projections.projectionList().add(Projections.property("route.shortName"), "shortName")))
+                        .setResultTransformer(Transformers.aliasToBean(GtfsRoutes.class)).list();
+
+                if (data.getRouteList().isEmpty()) {
+                    data.setRouteList(routeList);
+                } else {
+                    for (GtfsRoutes route : routeList) {
+                        boolean foundRoute = false;
+                        for (GtfsRoutes route2 : data.getRouteList()) {
+                            if (route2.getShortName().equals(route.getShortName())) {
+                                foundRoute = true;
+                            }
+                        }
+                        if (foundRoute == false) {
+                            data.getRouteList().add(route);
+                        }
+                    }
+                }
+                if (found == false) {
+                    stopDataList.add(data);
                 }
             }
+            
+            
+            for (StopData sD : stopDataList) {
+                //System.out.println(sD.getStop().getName());
+                StringBuilder vehicles = null;
+                Collections.sort(sD.getRouteList(),new CustomComparator());
+                for (GtfsRoutes route : sD.getRouteList()) {
+                  //  logger.debug(route.getShortName());
+                    if (vehicles == null) {
+                        vehicles = new StringBuilder();
+                        vehicles.append(route.getShortName());
+                    }else { 
+                        vehicles.append(", " + route.getShortName());
+                    }
+                }
+                if(vehicles == null){
+                    vehicles = new  StringBuilder();
+                    vehicles.append("neobsluhovaná");
+                }
+                JsonObjectBuilder stopJOB = Json.createObjectBuilder();
+                stopJOB.add(sD.getStop().getId().getClass().getSimpleName(), sD.getStop().getId().getId());
+                stopJOB.add("name", sD.getStop().getName());
+                stopJOB.add("lat", sD.getStop().getLat());
+                stopJOB.add("lon", sD.getStop().getLon());
+                stopJOB.add("vehicles", vehicles.toString());
+
+                stopsJAB.add(stopJOB);
+
+            }
+
             JsonObjectBuilder stopsJOB = Json.createObjectBuilder();
             stopsJOB.add("stops", stopsJAB);
             JsonObject stopsJO = stopsJOB.build();
             System.out.println(stopsJO.toString());
             jw.writeObject(stopsJO);
+            tx.commit(); //closes transaction
+            session.close();
         } catch (FileNotFoundException ex) {
             Logger.getLogger(DatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
@@ -102,7 +179,18 @@ public class DatabaseConnector {
         }
 
     }
+public class CustomComparator implements Comparator<GtfsRoutes> {
 
+        @Override
+        public int compare(GtfsRoutes o1, GtfsRoutes o2) {
+            if(!((o1.getShortName().contains("N") || o2.getShortName().contains("N")) || (o1.getShortName().contains("X") || o2.getShortName().contains("X")))){
+               Integer object1 = Integer.parseInt(o1.getShortName());
+               Integer object2 = Integer.parseInt(o2.getShortName());
+               return object1.compareTo(object2);
+            }
+            return o1.getShortName().compareTo(o2.getShortName());
+        }
+    }
     public void testConnection() throws Exception {
         System.out.println("IDEM TESTUVAC");
         Session session = getSession();

@@ -84,6 +84,13 @@ public class Utils implements Runnable {
         int secs = duration.toStandardSeconds().getSeconds();
         return secs < 12600 ? secs + 86400 : secs;
     }
+    public static Integer getSecondsFromMidnight(Date date) {
+        DateTime now = new DateTime(date);
+        DateTime midnight = now.withTimeAtStartOfDay();       
+        Duration duration = new Duration(midnight, now);
+        int secs = duration.toStandardSeconds().getSeconds();
+        return secs < 12600 ? secs + 86400 : secs;
+    }
     
     public static String secsToHMS(int totalSecs) {
         int hours = totalSecs / 3600;
