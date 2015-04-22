@@ -84,19 +84,21 @@ public class DeviceAPI extends HttpServlet {
                         int secondsSinceMidnight = Utils.getSecondsFromMidnight();
                         List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", requestStopName)).list();
                         routeList = getRouteData(Utils.getActualServiceId(), secondsSinceMidnight, stopList, session, request);
-                        
+
                         //        logger.debug(routeList.size() + " velkost routeListu");
                         logger.debug("size route list " + routeList.size());
                         if (routeList.isEmpty() || (routeList.size() <= routeCountRequest)) {
                             //             logger.debug("route List je empty vchadzam do dalsieho citania");
                             routeListTomorrow = getRouteData(Utils.getTomorrowServiceId(), 3600, stopList, session, request);
                             //              logger.debug("naslo sa " + routeListTomorrow.size() + " zaznamov");
+                            Collections.sort(routeListTomorrow, new CustomComparator());
+
                             routeList.addAll(routeListTomorrow);
                             //             logger.debug("spolu je to " + routeList.size());
 
+                        } else {
+                            Collections.sort(routeList, new CustomComparator());
                         }
-                        //Collections.sort(routeList, new CustomComparator());
-
                         JsonArrayBuilder routesJAB = Json.createArrayBuilder();
                         int routeIndex = 0;
 
