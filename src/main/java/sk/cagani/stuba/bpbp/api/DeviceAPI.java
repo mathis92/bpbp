@@ -62,11 +62,12 @@ public class DeviceAPI extends HttpServlet {
         Map<String, Object> jwConfig = new HashMap<>();
         jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
         JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream(), Charset.forName("UTF-8"));
-     //   logger.info("[req URI]: " + request.getRequestURI());
-      //  logger.info(request.getParameterMap().toString());
+        //   logger.info("[req URI]: " + request.getRequestURI());
+        //  logger.info(request.getParameterMap().toString());
         if (!request.getParameterMap().isEmpty()) {
             switch (request.getParameter("requestContent")) {
                 case "CurrentStop": {
+                    logger.debug("[CurrentStop]");
                     if (request.getParameter("stopName") != null) {
                         String requestStopName = request.getParameter("stopName");
 
@@ -83,16 +84,18 @@ public class DeviceAPI extends HttpServlet {
                         int secondsSinceMidnight = Utils.getSecondsFromMidnight();
                         List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", requestStopName)).list();
                         routeList = getRouteData(Utils.getActualServiceId(), secondsSinceMidnight, stopList, session, request);
-                //        logger.debug(routeList.size() + " velkost routeListu");
-                        if (routeList.isEmpty() || (routeList.size() < routeCountRequest)) {
-               //             logger.debug("route List je empty vchadzam do dalsieho citania");
-                            routeListTomorrow = getRouteData(Utils.getTomorrowServiceId(), 0, stopList, session, request);
-              //              logger.debug("naslo sa " + routeListTomorrow.size() + " zaznamov");
+                        
+                        //        logger.debug(routeList.size() + " velkost routeListu");
+                        logger.debug("size route list " + routeList.size());
+                        if (routeList.isEmpty() || (routeList.size() <= routeCountRequest)) {
+                            //             logger.debug("route List je empty vchadzam do dalsieho citania");
+                            routeListTomorrow = getRouteData(Utils.getTomorrowServiceId(), 3600, stopList, session, request);
+                            //              logger.debug("naslo sa " + routeListTomorrow.size() + " zaznamov");
                             routeList.addAll(routeListTomorrow);
-               //             logger.debug("spolu je to " + routeList.size());
+                            //             logger.debug("spolu je to " + routeList.size());
 
                         }
-                        Collections.sort(routeList, new CustomComparator());
+                        //Collections.sort(routeList, new CustomComparator());
 
                         JsonArrayBuilder routesJAB = Json.createArrayBuilder();
                         int routeIndex = 0;
@@ -119,26 +122,27 @@ public class DeviceAPI extends HttpServlet {
                         session.close();
 
                         JsonArray routesJA = routesJAB.build();
-             //           logger.info(routesJA.toString());
+                        //           logger.info(routesJA.toString());
                         jw.writeArray(routesJA);
                     }
                     break;
                 }
                 case "currentVehicleDetail": {
-                //    logger.debug("in api call currentVehicleDetail " + request.getRequestURI() + " " + request.getRequestURL());
+                    logger.debug("[currentVehicleDetail]");
+//    logger.debug("in api call currentVehicleDetail " + request.getRequestURI() + " " + request.getRequestURL());
                     Session session = DatabaseConnector.getSession();
                     Transaction tx = session.beginTransaction();
                     String vehicleId = request.getParameter("vehicleId");
-                //    logger.debug("vehicleID" + vehicleId);
+                    //    logger.debug("vehicleID" + vehicleId);
                     GtfsTripsId tripId = new GtfsTripsId("01", vehicleId);
                     GtfsTrips currentTrip = (GtfsTrips) session.get(GtfsTrips.class, tripId);
                     List<TripPositions> currentVehicleDetailList = session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", currentTrip)).add(Restrictions.eq("state", "a")).list();
                     JsonArrayBuilder vehicleJAB = Json.createArrayBuilder();
-               //     System.out.println(currentVehicleDetailList.size());
+                    //     System.out.println(currentVehicleDetailList.size());
 
                     if (!currentVehicleDetailList.isEmpty()) {
                         for (TripPositions currentVehicleDetail : currentVehicleDetailList) {
-                 //           logger.debug((Utils.getSecondsFromMidnight(currentVehicleDetail.getModifiedAt()) - currentVehicleDetail.getDelay()) + " next stop arrival time " + currentVehicleDetail.getGtfsTrips().getId().getId());
+                            //           logger.debug((Utils.getSecondsFromMidnight(currentVehicleDetail.getModifiedAt()) - currentVehicleDetail.getDelay()) + " next stop arrival time " + currentVehicleDetail.getGtfsTrips().getId().getId());
                             List<GtfsStopTimes> nextStopTime = session.createCriteria(GtfsStopTimes.class, "stopTimes")
                                     .add(Restrictions.eq("stopTimes.gtfsTrips", currentVehicleDetail.getGtfsTrips()))
                                     .addOrder(Order.asc("arrivalTime"))
@@ -198,12 +202,13 @@ public class DeviceAPI extends HttpServlet {
                     tx.commit();
                     session.close();
                     JsonArray vehicleJA = vehicleJAB.build();
-               //     System.out.println(vehicleJA.toString());
+                    //     System.out.println(vehicleJA.toString());
                     jw.writeArray(vehicleJA);
                     break;
                 }
                 case "vehiclesPositions": {
-               //     logger.debug("in api call vehiclePositions " + request.getRequestURI() + " " + request.getRequestURL());
+                    logger.debug("[vehiclesPositions]");
+                    //     logger.debug("in api call vehiclePositions " + request.getRequestURI() + " " + request.getRequestURL());
                     Session session = DatabaseConnector.getSession();
                     Transaction tx = session.beginTransaction();
                     double northLon = Double.parseDouble(request.getParameter("northLon"));
@@ -211,13 +216,13 @@ public class DeviceAPI extends HttpServlet {
                     double westLat = Double.parseDouble(request.getParameter("westLat"));
                     double southLon = Double.parseDouble(request.getParameter("southLon"));
 
-                 //   System.out.println("lat " + (westLat) + " " + (eastLat) + " lon " + (northLon) + " " + (southLon));
+                    //   System.out.println("lat " + (westLat) + " " + (eastLat) + " lon " + (northLon) + " " + (southLon));
                     List<TripPositions> tripPositionsList = session.createCriteria(TripPositions.class).add(Restrictions.between("lat", westLat, eastLat)).add(Restrictions.between("lon", southLon, northLon)).add(Restrictions.eq("state", "a")).list();
 
                     JsonArrayBuilder vehicleJAB = Json.createArrayBuilder();
-                 //   System.out.println(tripPositionsList.size());
+                    //   System.out.println(tripPositionsList.size());
                     for (TripPositions tripPosition : tripPositionsList) {
-                //        logger.debug((Utils.getSecondsFromMidnight(tripPosition.getModifiedAt()) - tripPosition.getDelay()) + " next stop arrival time " + tripPosition.getGtfsTrips().getId().getId());
+                        //        logger.debug((Utils.getSecondsFromMidnight(tripPosition.getModifiedAt()) - tripPosition.getDelay()) + " next stop arrival time " + tripPosition.getGtfsTrips().getId().getId());
                         List<GtfsStopTimes> nextStopTime = session.createCriteria(GtfsStopTimes.class, "stopTimes")
                                 .add(Restrictions.eq("stopTimes.gtfsTrips", tripPosition.getGtfsTrips()))
                                 .addOrder(Order.asc("arrivalTime"))
@@ -258,12 +263,12 @@ public class DeviceAPI extends HttpServlet {
                     tx.commit();
                     session.close();
                     JsonArray vehicleJA = vehicleJAB.build();
-                //    System.out.println(vehicleJA.toString());
+                    //    System.out.println(vehicleJA.toString());
                     jw.writeArray(vehicleJA);
                     break;
                 }
                 case "allStops": {
-             //       logger.debug("in api call allStops " + request.getRequestURI() + " " + request.getRequestURL());
+                    //       logger.debug("in api call allStops " + request.getRequestURI() + " " + request.getRequestURL());
                     Session session = DatabaseConnector.getSession();
                     List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class).list();
                     session.getTransaction().commit(); //closes transaction
@@ -282,7 +287,7 @@ public class DeviceAPI extends HttpServlet {
                     JsonObjectBuilder stopsJOB = Json.createObjectBuilder();
                     stopsJOB.add("stops", stopsJAB);
                     JsonObject stopsJO = stopsJOB.build();
-                //    System.out.println(stopsJO.toString());
+                    //    System.out.println(stopsJO.toString());
                     jw.writeObject(stopsJO);
 
                     break;
@@ -323,7 +328,7 @@ public class DeviceAPI extends HttpServlet {
         switch (request.getRequestURI()) {
             case "/api/allStops": {
 
-            //    logger.debug("in api call allStops " + request.getRequestURI() + " " + request.getRequestURL());
+                //    logger.debug("in api call allStops " + request.getRequestURI() + " " + request.getRequestURL());
                 Session session = DatabaseConnector.getSession();
                 List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class
                 ).list();
@@ -347,7 +352,7 @@ public class DeviceAPI extends HttpServlet {
                         "stops", stopsJAB);
                 JsonObject stopsJO = stopsJOB.build();
 
-            //    System.out.println(stopsJO.toString());
+                //    System.out.println(stopsJO.toString());
                 jw.writeObject(stopsJO);
             }
 
@@ -367,7 +372,7 @@ public class DeviceAPI extends HttpServlet {
     }
 
     public List<RouteData> getRouteData(String serviceId, Integer arrivalTime, List<GtfsStops> stopList, Session session, HttpServletRequest request) {
-        List<RouteData> routeList = new ArrayList<>();
+        List<RouteData> tripList = new ArrayList<>();
         for (GtfsStops stop : stopList) {
             List<GtfsStopTimes> stopTimesList;
 
@@ -377,38 +382,37 @@ public class DeviceAPI extends HttpServlet {
                         //.createAlias("trip.tripPositionses", "position")
                         //.setProjection(Projections.sqlProjection("sum(cast(position.delay as signed)+ arrivalTime) as timewdelay", new String[] {"timewdelay"} , new Type[] {Hibernate.}))
                         .add(Restrictions.eq("gtfsStops", stop))
-                        .add(Restrictions.ge("arrivalTime", arrivalTime))
+                        .add(Restrictions.ge("arrivalTime", arrivalTime - 3600))
                         .add(Restrictions.eq("trip.serviceIdId", serviceId))
                         .addOrder(Order.asc("arrivalTime"))
-                        .setMaxResults(3).list();
+                        .list();//.setMaxResults(Integer.parseInt(request.getParameter("count"))).list();
             } else {
                 stopTimesList = session.createCriteria(GtfsStopTimes.class, "stopTime")
                         .createAlias("stopTime.gtfsTrips", "trip")
                         .add(Restrictions.eq("gtfsStops", stop))
-                        .add(Restrictions.ge("arrivalTime", arrivalTime))
+                        .add(Restrictions.ge("arrivalTime", arrivalTime - 3600))
                         .add(Restrictions.eq("trip.serviceIdId", serviceId))
                         .addOrder(Order.asc("arrivalTime"))
-                        .setMaxResults(10).list();
+                        .list();//.setMaxResults(10).list();
 
             }
             for (GtfsStopTimes stopTimes : stopTimesList) {
-                List<TripPositions> tripPositionList = session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", stopTimes.getGtfsTrips())).list();
-                TripPositions lastPosition;
-                if (!tripPositionList.isEmpty()) {
-                    lastPosition = tripPositionList.get(0);
-                } else {
-                 //   logger.info("empty trip positions");
-                    lastPosition = null;
-                }
+                TripPositions tripPosition = (TripPositions) session.createCriteria(TripPositions.class)
+                        .add(Restrictions.eq("gtfsTrips", stopTimes.getGtfsTrips()))
+                        .add(Restrictions.eq("state", "a"))
+                        .uniqueResult();
+
                 Integer delay = 0;
-                if (lastPosition != null) {
-                    delay = lastPosition.getDelay();
+                if (tripPosition != null) {
+                    delay = tripPosition.getDelay();
                 }
-                RouteData routeData = new RouteData(stopTimes.getGtfsTrips().getGtfsRoutes(), stopTimes, stopTimes.getGtfsTrips(), lastPosition);
-                routeList.add(routeData);
+                if (stopTimes.getArrivalTime() + delay >= arrivalTime) {
+                    RouteData routeData = new RouteData(stopTimes.getGtfsTrips().getGtfsRoutes(), stopTimes, stopTimes.getGtfsTrips(), tripPosition);
+                    tripList.add(routeData);
+                }
             }
         }
-        return routeList;
+        return tripList;
     }
 
 }
