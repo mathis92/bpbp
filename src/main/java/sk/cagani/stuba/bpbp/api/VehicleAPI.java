@@ -85,8 +85,8 @@ public class VehicleAPI extends HttpServlet {
                 for (GtfsStops stop : gtfsStops) {
                     //List<GtfsStopTimes> stopTimesList = sessionInit.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).addOrder(Order.asc("departureTime")).list();
                     for (GtfsStopTimes stopTime : (List<GtfsStopTimes>) sessionInit.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).addOrder(Order.asc("departureTime")).list()) {
-                        int secsFromMidnight = 44000;//Utils.getSecondsFromMidnight();
-                        if (stopTime.getDepartureTime() > secsFromMidnight - 1200 && stopTime.getDepartureTime() < secsFromMidnight + 1200) {
+                        int secsFromMidnight = Utils.getSecondsFromMidnight();
+                        if (stopTime.getDepartureTime() > secsFromMidnight - 600 && stopTime.getDepartureTime() < secsFromMidnight + 600) {
                             if (stopTime.getGtfsTrips().getServiceIdId().equals("Prac.dny_0"/*Utils.getActualServiceId()*/)) {
                                 if (!stop.getName().equals(stopTime.getGtfsTrips().getTripHeadsign())) {
                                     JsonObjectBuilder tripJOB = Json.createObjectBuilder();
@@ -95,7 +95,7 @@ public class VehicleAPI extends HttpServlet {
                                     tripJOB.add("tripId", stopTime.getGtfsTrips().getId().getId());
                                     tripJOB.add("departureTime", stopTime.getDepartureTime());
                                     tripJOB.add("headSign", stopTime.getGtfsTrips().getTripHeadsign());
-
+                                    tripJOB.add("foundStop", stop.getName());
                                     tripsJAB.add(tripJOB);
                                 }
                             }
