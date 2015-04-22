@@ -85,7 +85,7 @@ public class VehicleAPI extends HttpServlet {
                 for (GtfsStops stop : gtfsStops) {
                     //List<GtfsStopTimes> stopTimesList = sessionInit.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).addOrder(Order.asc("departureTime")).list();
                     for (GtfsStopTimes stopTime : (List<GtfsStopTimes>) sessionInit.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).addOrder(Order.asc("departureTime")).list()) {
-                        int secsFromMidnight = Utils.getSecondsFromMidnight();
+                        int secsFromMidnight = 61020;//Utils.getSecondsFromMidnight();
                         if (stopTime.getDepartureTime() > secsFromMidnight - 600 && stopTime.getDepartureTime() < secsFromMidnight + 600) {
                             if (stopTime.getGtfsTrips().getServiceIdId().equals("Prac.dny_0"/*Utils.getActualServiceId()*/)) {
                                 if (!stop.getName().equals(stopTime.getGtfsTrips().getTripHeadsign())) {
