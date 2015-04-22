@@ -60,7 +60,7 @@ public class VehicleAPI extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-     //   System.out.println("\n\n" + DatabaseConnector.getStatistics() + "\n\n");
+        //   System.out.println("\n\n" + DatabaseConnector.getStatistics() + "\n\n");
         //      System.out.print("[POST]  ");
         response.setContentType("text/json");
         Map<String, Boolean> jwConfig = new HashMap<>();
@@ -87,7 +87,7 @@ public class VehicleAPI extends HttpServlet {
                     for (GtfsStopTimes stopTime : (List<GtfsStopTimes>) sessionInit.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).addOrder(Order.asc("departureTime")).list()) {
                         int secsFromMidnight = 61020;//Utils.getSecondsFromMidnight();
                         if (stopTime.getDepartureTime() > secsFromMidnight - 600 && stopTime.getDepartureTime() < secsFromMidnight + 600) {
-                            if (stopTime.getGtfsTrips().getServiceIdId().equals("Prac.dny_0"/*Utils.getActualServiceId()*/)) {
+                            if (stopTime.getGtfsTrips().getServiceIdId().equals(Utils.getActualServiceId())) {
                                 if (!stop.getName().equals(stopTime.getGtfsTrips().getTripHeadsign())) {
                                     JsonObjectBuilder tripJOB = Json.createObjectBuilder();
                                     tripJOB.add("routeName", stopTime.getGtfsTrips().getGtfsRoutes().getShortName());
@@ -111,7 +111,7 @@ public class VehicleAPI extends HttpServlet {
                 jw.writeObject(possibleTripJO);
                 break;
             case "/api/vehicle/updateLocation":
-     //           System.out.println("[Update location] tripId: " + request.getParameter("tripId"));
+                //           System.out.println("[Update location] tripId: " + request.getParameter("tripId"));
                 Session sessionUpdateLocation = DatabaseConnector.getSession();
                 Transaction transactionUpdateLocation = null;
                 try {
@@ -138,10 +138,10 @@ public class VehicleAPI extends HttpServlet {
                         tripPosition.setState(request.getParameter("state"));
                         tripPosition.setModifiedAt(null);
                     }
-                    
+
                     sessionUpdateLocation.saveOrUpdate(tripPosition);
                     transactionUpdateLocation.commit();
-                    
+
                 } catch (HibernateException | NumberFormatException e) {
                     if (transactionUpdateLocation != null) {
                         transactionUpdateLocation.rollback();
@@ -185,7 +185,7 @@ public class VehicleAPI extends HttpServlet {
                     stopsJOB.add("lon", gst.getGtfsStops().getLon());
                     stopsJOB.add("zoneId", gst.getGtfsStops().getZoneId());
                     stopsJOB.add("arrivalTime", gst.getArrivalTime());
-                    stopsJOB.add("isOnRequest", gst.getPickupType().equals(3) ? "true" : "false");                    
+                    stopsJOB.add("isOnRequest", gst.getPickupType().equals(3) ? "true" : "false");
 
                     stopsJAB.add(stopsJOB);
                 }
@@ -202,6 +202,21 @@ public class VehicleAPI extends HttpServlet {
                 System.out.println(tripInfoJO.toString());
 
                 jw.writeObject(tripInfoJO);
+                break;
+            case "/api/vehicle/getTripsForStop":
+                System.out.println("[Get nearest trips for stop] stop name: " + request.getParameter("stopName"));
+                Session sessionGetTripsForStop = DatabaseConnector.getSession();
+                Transaction transactiongetTripsForStop = sessionGetTripsForStop.beginTransaction();
+
+                List<GtfsStops> stopList = sessionGetTripsForStop.createCriteria(GtfsStops.class).add(Restrictions.eq("name", request.getParameter("stopName"))).list();
+                
+                for (GtfsStops stop : stopList) {
+                    
+                }
+
+                transactiongetTripsForStop.commit();
+                sessionGetTripsForStop.close();
+                
                 break;
         }
         response.setStatus(HttpServletResponse.SC_OK);
