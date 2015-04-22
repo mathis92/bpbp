@@ -72,6 +72,83 @@ public class DatabaseConnector {
         return sessionFactory.openSession();
     }
 
+    public void writeDetailedStopsToFile() {
+        FileOutputStream fos = null;
+        try {
+            Map<String, Object> jwConfig = new HashMap<>();
+            jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
+            fos = new FileOutputStream("/home/debian/allDetailedStops.txt");
+            JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(fos, Charset.forName("UTF-8"));
+            Session session = getSession();
+            Transaction tx = session.beginTransaction();
+            List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class).addOrder(Order.asc("name")).list();
+
+            JsonArrayBuilder stopsJAB = Json.createArrayBuilder();
+            List<StopData> stopDataList = new ArrayList<>();
+
+            for (GtfsStops stop : stopsList) {
+                StopData data = null;
+
+                data = new StopData();
+                data.stop = stop;
+                List<GtfsRoutes> routeList = session.createCriteria(GtfsStopTimes.class, "stopTime")
+                        .createAlias("stopTime.gtfsTrips", "trip")
+                        .createAlias("trip.gtfsRoutes", "route")
+                        .add(Restrictions.eq("gtfsStops", stop))
+                        .addOrder(Order.asc("route.shortName"))
+                        .setProjection(Projections.distinct(Projections.projectionList().add(Projections.property("route.shortName"), "shortName")))
+                        .setResultTransformer(Transformers.aliasToBean(GtfsRoutes.class)).list();
+
+                data.setRouteList(routeList);
+                stopDataList.add(data);
+            }
+
+            for (StopData sD : stopDataList) {
+                //System.out.println(sD.getStop().getName());
+                StringBuilder vehicles = null;
+                Collections.sort(sD.getRouteList(), new CustomComparator());
+                for (GtfsRoutes route : sD.getRouteList()) {
+                    if (vehicles == null) {
+                        vehicles = new StringBuilder();
+                        vehicles.append(route.getShortName());
+                    } else {
+                        vehicles.append(", " + route.getShortName());
+                    }
+                }
+                if (vehicles == null) {
+                    vehicles = new StringBuilder();
+                    vehicles.append("neobsluhovaná");
+                }
+                JsonObjectBuilder stopJOB = Json.createObjectBuilder();
+                stopJOB.add(sD.getStop().getId().getClass().getSimpleName(), sD.getStop().getId().getId());
+                stopJOB.add("name", sD.getStop().getName());
+                stopJOB.add("lat", sD.getStop().getLat());
+                stopJOB.add("lon", sD.getStop().getLon());
+                stopJOB.add("vehicles", vehicles.toString());
+
+                stopsJAB.add(stopJOB);
+
+            }
+
+            JsonObjectBuilder stopsJOB = Json.createObjectBuilder();
+            stopsJOB.add("stops", stopsJAB);
+            JsonObject stopsJO = stopsJOB.build();
+            System.out.println(stopsJO.toString());
+            jw.writeObject(stopsJO);
+            tx.commit(); //closes transaction
+            session.close();
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(DatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            try {
+                fos.close();
+            } catch (IOException ex) {
+                Logger.getLogger(DatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+
+    }
+
     public void writeStopsToFile() {
         FileOutputStream fos = null;
         try {
@@ -131,23 +208,22 @@ public class DatabaseConnector {
                     stopDataList.add(data);
                 }
             }
-            
-            
+
             for (StopData sD : stopDataList) {
                 //System.out.println(sD.getStop().getName());
                 StringBuilder vehicles = null;
-                Collections.sort(sD.getRouteList(),new CustomComparator());
+                Collections.sort(sD.getRouteList(), new CustomComparator());
                 for (GtfsRoutes route : sD.getRouteList()) {
-                  //  logger.debug(route.getShortName());
+                    //  logger.debug(route.getShortName());
                     if (vehicles == null) {
                         vehicles = new StringBuilder();
                         vehicles.append(route.getShortName());
-                    }else { 
+                    } else {
                         vehicles.append(", " + route.getShortName());
                     }
                 }
-                if(vehicles == null){
-                    vehicles = new  StringBuilder();
+                if (vehicles == null) {
+                    vehicles = new StringBuilder();
                     vehicles.append("neobsluhovaná");
                 }
                 JsonObjectBuilder stopJOB = Json.createObjectBuilder();
@@ -179,18 +255,20 @@ public class DatabaseConnector {
         }
 
     }
-public class CustomComparator implements Comparator<GtfsRoutes> {
+
+    public class CustomComparator implements Comparator<GtfsRoutes> {
 
         @Override
         public int compare(GtfsRoutes o1, GtfsRoutes o2) {
-            if(!((o1.getShortName().contains("N") || o2.getShortName().contains("N")) || (o1.getShortName().contains("X") || o2.getShortName().contains("X")))){
-               Integer object1 = Integer.parseInt(o1.getShortName());
-               Integer object2 = Integer.parseInt(o2.getShortName());
-               return object1.compareTo(object2);
+            if (!((o1.getShortName().contains("N") || o2.getShortName().contains("N")) || (o1.getShortName().contains("X") || o2.getShortName().contains("X")))) {
+                Integer object1 = Integer.parseInt(o1.getShortName());
+                Integer object2 = Integer.parseInt(o2.getShortName());
+                return object1.compareTo(object2);
             }
             return o1.getShortName().compareTo(o2.getShortName());
         }
     }
+
     public void testConnection() throws Exception {
         System.out.println("IDEM TESTUVAC");
         Session session = getSession();

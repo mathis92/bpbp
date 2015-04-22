@@ -28,6 +28,7 @@ public class AppInit {
         
         new Thread(new Utils()).start();
        // dc.writeStopsToFile();
+        //dc.writeDetailedStopsToFile();
         new AppInit().startServlets();
         
        

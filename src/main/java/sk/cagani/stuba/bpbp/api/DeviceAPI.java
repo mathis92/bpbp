@@ -20,18 +20,24 @@ import javax.json.stream.JsonGenerator;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.hibernate.Hibernate;
+
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.type.Type;
 import org.slf4j.LoggerFactory;
 import sk.cagani.stuba.bpbp.device.RouteData;
 import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
 import sk.cagani.stuba.bpbp.utilities.Utils;
+import static sk.cagani.stuba.bpbp.utilities.Utils.secsToHMS;
 import stuba.bpbpdatabasemapper.GtfsRoutes;
 import stuba.bpbpdatabasemapper.GtfsStopTimes;
 import stuba.bpbpdatabasemapper.GtfsStops;
 import stuba.bpbpdatabasemapper.GtfsTrips;
+import stuba.bpbpdatabasemapper.GtfsTripsId;
 import stuba.bpbpdatabasemapper.TripPositions;
 
 /*
@@ -64,70 +70,44 @@ public class DeviceAPI extends HttpServlet {
                     if (request.getParameter("stopName") != null) {
                         String requestStopName = request.getParameter("stopName");
 
-                        List<RouteData> routeList = new ArrayList<>();
+                        List<RouteData> routeList;
+                        List<RouteData> routeListTomorrow;
 
                         Session session = DatabaseConnector.getSession();
                         Transaction tx = null;
                         tx = session.beginTransaction(); //open the transaction
-                        int secondsSinceMidnight = Utils.getSecondsFromMidnight();
-                        List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", requestStopName)).list();
-                        for (GtfsStops stop : stopList) {
-                            List<GtfsStopTimes> stopTimesList;
-                            if (request.getParameter("count") != null) {
-                                stopTimesList = session.createCriteria(GtfsStopTimes.class, "stopTime")
-                                        .createAlias("stopTime.gtfsTrips", "trip")
-                                        .add(Restrictions.eq("gtfsStops", stop))
-                                        .add(Restrictions.gt("arrivalTime", secondsSinceMidnight))
-                                        .add(Restrictions.eq("trip.serviceIdId", Utils.getActualServiceId()))
-                                        .addOrder(Order.asc("arrivalTime"))
-                                        .setMaxResults(3).list();
-                            } else {
-                                stopTimesList = session.createCriteria(GtfsStopTimes.class, "stopTime")
-                                        .createAlias("stopTime.gtfsTrips", "trip")
-                                        .add(Restrictions.eq("gtfsStops", stop))
-                                        .add(Restrictions.gt("arrivalTime", secondsSinceMidnight))
-                                        .add(Restrictions.eq("trip.serviceIdId", Utils.getActualServiceId()))
-                                        .addOrder(Order.asc("arrivalTime"))
-                                        .setMaxResults(10).list();
-
-                            }
-                            for (GtfsStopTimes stopTimes : stopTimesList) {
-                                List<TripPositions> tripPositionList = session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", stopTimes.getGtfsTrips())).list();
-                                TripPositions lastPosition;
-                                if (!tripPositionList.isEmpty()) {
-                                    lastPosition = tripPositionList.get(0);
-                                    //System.out.println(lastPosition.getDelay());
-                                } else {
-                                    logger.info("empty trip positions");
-                                    lastPosition = null;
-                                }
-                                Integer delay = 0;
-                                if (lastPosition != null) {
-                                    delay = lastPosition.getDelay();
-                                }
-                                RouteData routeData = new RouteData(stopTimes.getGtfsTrips().getGtfsRoutes(), stopTimes, stopTimes.getGtfsTrips(), lastPosition);
-                                routeList.add(routeData);
-                            }
-                        }
-
-                        Collections.sort(routeList, new CustomComparator());
-
-                        JsonArrayBuilder routesJAB = Json.createArrayBuilder();
-                        int routeIndex = 0;
                         int routeCountRequest = 15;
                         if (request.getParameter("count") != null) {
                             routeCountRequest = Integer.parseInt(request.getParameter("count"));
                         }
+                        int secondsSinceMidnight = Utils.getSecondsFromMidnight();
+                        List<GtfsStops> stopList = session.createCriteria(GtfsStops.class).add(Restrictions.eq("name", requestStopName)).list();
+                        routeList = getRouteData(Utils.getActualServiceId(), secondsSinceMidnight, stopList, session, request);
+                        logger.debug(routeList.size() + " velkost routeListu");
+                        if (routeList.isEmpty() || (routeList.size() < routeCountRequest)) {
+                            logger.debug("route List je empty vchadzam do dalsieho citania");
+                            routeListTomorrow = getRouteData(Utils.getTomorrowServiceId(), 0, stopList, session, request);
+                            logger.debug("naslo sa " + routeListTomorrow.size() + " zaznamov");
+                            routeList.addAll(routeListTomorrow);
+                            logger.debug("spolu je to " + routeList.size());
+
+                        }
+                        Collections.sort(routeList, new CustomComparator());
+
+                        JsonArrayBuilder routesJAB = Json.createArrayBuilder();
+                        int routeIndex = 0;
+
                         for (RouteData route : routeList) {
                             if (routeIndex < routeCountRequest) {
                                 JsonObjectBuilder routeJOB = Json.createObjectBuilder();
-                                routeJOB.add("routeId", route.getRoute().getShortName());
+                                routeJOB.add("vehicleId", route.getGtfsTrip().getId().getId());
+                                routeJOB.add("vehicleShortName", route.getRoute().getShortName());
                                 routeJOB.add("stopHeadSign", route.getGtfsTrip().getTripHeadsign());
                                 routeJOB.add("routeType", route.getRoute().getType());
                                 if (route.getTripPositions() != null) {
                                     routeJOB.add("delay", route.getTripPositions().getDelay());
                                 } else {
-                                    routeJOB.add("delay", "0");
+                                    routeJOB.add("delay", "notStarted");
                                 }
                                 routeJOB.add("arrivalTime", secsToHMS(route.getStopTime().getArrivalTime()));
                                 routesJAB.add(routeJOB);
@@ -144,7 +124,84 @@ public class DeviceAPI extends HttpServlet {
                     }
                     break;
                 }
+                case "currentVehicleDetail": {
+                    logger.debug("in api call currentVehicleDetail " + request.getRequestURI() + " " + request.getRequestURL());
+                    Session session = DatabaseConnector.getSession();
+                    Transaction tx = session.beginTransaction();
+                    String vehicleId = request.getParameter("vehicleId");
+                    logger.debug("vehicleID" + vehicleId);
+                    GtfsTripsId tripId = new GtfsTripsId("01", vehicleId);
+                    GtfsTrips currentTrip = (GtfsTrips) session.get(GtfsTrips.class, tripId);
+                    List<TripPositions> currentVehicleDetailList = session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", currentTrip)).add(Restrictions.eq("state", "a")).list();
+                    JsonArrayBuilder vehicleJAB = Json.createArrayBuilder();
+                    System.out.println(currentVehicleDetailList.size());
 
+                    if (!currentVehicleDetailList.isEmpty()) {
+                        for (TripPositions currentVehicleDetail : currentVehicleDetailList) {
+                            logger.debug((Utils.getSecondsFromMidnight(currentVehicleDetail.getModifiedAt()) - currentVehicleDetail.getDelay()) + " next stop arrival time " + currentVehicleDetail.getGtfsTrips().getId().getId());
+                            List<GtfsStopTimes> nextStopTime = session.createCriteria(GtfsStopTimes.class, "stopTimes")
+                                    .add(Restrictions.eq("stopTimes.gtfsTrips", currentVehicleDetail.getGtfsTrips()))
+                                    .addOrder(Order.asc("arrivalTime"))
+                                    .list();
+                            GtfsTrips trip = currentVehicleDetail.getGtfsTrips();
+                            GtfsRoutes route = trip.getGtfsRoutes();
+                            JsonObjectBuilder vehicleJOB = Json.createObjectBuilder();
+                            vehicleJOB.add("id", trip.getId().getId());
+                            vehicleJOB.add("shortName", route.getShortName());
+                            vehicleJOB.add("vehicleType", route.getType());
+                            vehicleJOB.add("lon", currentVehicleDetail.getLon());
+                            vehicleJOB.add("lat", currentVehicleDetail.getLat());
+                            vehicleJOB.add("headingTo", trip.getTripHeadsign());
+                            vehicleJOB.add("delay", currentVehicleDetail.getDelay());
+                            vehicleJOB.add("speed", currentVehicleDetail.getSpeed());
+                            if (nextStopTime.isEmpty()) {
+                                vehicleJOB.add("lastStop", "Not supported");
+                                vehicleJOB.add("nextStop", "Not supported");
+                                vehicleJOB.add("arrivalTime", "Not supported");
+
+                            } else {
+                                if (currentVehicleDetail.getNextStopNumber() == 0) {
+                                    vehicleJOB.add("lastStop", "Vehicle is at start");
+                                    vehicleJOB.add("nextStop", nextStopTime.get(currentVehicleDetail.getNextStopNumber() + 1).getGtfsStops().getName());
+                                    vehicleJOB.add("arrivalTime", Utils.secsToHMS(nextStopTime.get(currentVehicleDetail.getNextStopNumber() + 1).getArrivalTime()));
+                                } else {
+                                    vehicleJOB.add("lastStop", nextStopTime.get(currentVehicleDetail.getNextStopNumber() - 1).getGtfsStops().getName());
+                                    vehicleJOB.add("nextStop", nextStopTime.get(currentVehicleDetail.getNextStopNumber()).getGtfsStops().getName());
+                                    vehicleJOB.add("arrivalTime", Utils.secsToHMS(nextStopTime.get(currentVehicleDetail.getNextStopNumber()).getArrivalTime()));
+                                }
+                            }
+
+                            vehicleJAB.add(vehicleJOB);
+                        }
+                    } else {
+                        List<GtfsStopTimes> nextStopTime = session.createCriteria(GtfsStopTimes.class, "stopTimes")
+                                .add(Restrictions.eq("stopTimes.gtfsTrips", currentTrip))
+                                .addOrder(Order.asc("arrivalTime"))
+                                .list();
+                        JsonObjectBuilder vehicleJOB = Json.createObjectBuilder();
+                        vehicleJOB.add("id", currentTrip.getId().getId());
+                        vehicleJOB.add("shortName", currentTrip.getGtfsRoutes().getShortName());
+                        vehicleJOB.add("vehicleType", currentTrip.getGtfsRoutes().getType());
+                        vehicleJOB.add("lon", "0");
+                        vehicleJOB.add("lat", "0");
+                        vehicleJOB.add("headingTo", currentTrip.getTripHeadsign());
+                        vehicleJOB.add("delay", "notStarted");
+                        vehicleJOB.add("speed", "0");
+
+                        vehicleJOB.add("lastStop", "not started Yet");
+                        vehicleJOB.add("nextStop", nextStopTime.get(1).getGtfsStops().getName());
+                        vehicleJOB.add("arrivalTime", Utils.secsToHMS(nextStopTime.get(1).getArrivalTime()));
+
+                        vehicleJAB.add(vehicleJOB);
+                    }
+
+                    tx.commit();
+                    session.close();
+                    JsonArray vehicleJA = vehicleJAB.build();
+                    System.out.println(vehicleJA.toString());
+                    jw.writeArray(vehicleJA);
+                    break;
+                }
                 case "vehiclesPositions": {
                     logger.debug("in api call vehiclePositions " + request.getRequestURI() + " " + request.getRequestURL());
                     Session session = DatabaseConnector.getSession();
@@ -162,10 +219,9 @@ public class DeviceAPI extends HttpServlet {
                     for (TripPositions tripPosition : tripPositionsList) {
                         logger.debug((Utils.getSecondsFromMidnight(tripPosition.getModifiedAt()) - tripPosition.getDelay()) + " next stop arrival time " + tripPosition.getGtfsTrips().getId().getId());
                         List<GtfsStopTimes> nextStopTime = session.createCriteria(GtfsStopTimes.class, "stopTimes")
-                                .createAlias("stopTimes.gtfsTrips", "trips")
-                                .createAlias("stopTimes.gtfsStops", "stops")
                                 .add(Restrictions.eq("stopTimes.gtfsTrips", tripPosition.getGtfsTrips()))
-                                .add(Restrictions.ge("arrivalTime", Utils.getSecondsFromMidnight(tripPosition.getModifiedAt()) - tripPosition.getDelay())).setMaxResults(1).list();
+                                .addOrder(Order.asc("arrivalTime"))
+                                .list();
 
                         GtfsTrips trip = tripPosition.getGtfsTrips();
                         //   GtfsStopTimes stopTime = session.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsTrips", trip)).list().get(0);
@@ -179,13 +235,22 @@ public class DeviceAPI extends HttpServlet {
                         vehicleJOB.add("headingTo", trip.getTripHeadsign());
                         vehicleJOB.add("delay", tripPosition.getDelay());
                         vehicleJOB.add("speed", tripPosition.getSpeed());
-                        vehicleJOB.add("lastStop", "maybeOnce");
+
                         if (nextStopTime.isEmpty()) {
+                            vehicleJOB.add("lastStop", "Not supported");
                             vehicleJOB.add("nextStop", "Not supported");
                             vehicleJOB.add("arrivalTime", "Not supported");
+
                         } else {
-                            vehicleJOB.add("nextStop", nextStopTime.get(0).getGtfsStops().getName());
-                            vehicleJOB.add("arrivalTime", Utils.secsToHMS(nextStopTime.get(0).getArrivalTime()));
+                            if (tripPosition.getNextStopNumber() == 0) {
+                                vehicleJOB.add("lastStop", "Vehicle is at start");
+                                vehicleJOB.add("nextStop", nextStopTime.get(tripPosition.getNextStopNumber() + 1).getGtfsStops().getName());
+                                vehicleJOB.add("arrivalTime", Utils.secsToHMS(nextStopTime.get(tripPosition.getNextStopNumber() + 1).getArrivalTime()));
+                            } else {
+                                vehicleJOB.add("lastStop", nextStopTime.get(tripPosition.getNextStopNumber() - 1).getGtfsStops().getName());
+                                vehicleJOB.add("nextStop", nextStopTime.get(tripPosition.getNextStopNumber()).getGtfsStops().getName());
+                                vehicleJOB.add("arrivalTime", Utils.secsToHMS(nextStopTime.get(tripPosition.getNextStopNumber()).getArrivalTime()));
+                            }
                         }
                         vehicleJAB.add(vehicleJOB);
                     }
@@ -293,21 +358,57 @@ public class DeviceAPI extends HttpServlet {
         response.setStatus(HttpServletResponse.SC_OK);
     }
 
-    public String secsToHMS(int totalSecs) {
-        int hours = totalSecs / 3600;
-        int minutes = (totalSecs % 3600) / 60;
-        int seconds = totalSecs % 60;
-
-        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
-
-    }
-
     public class CustomComparator implements Comparator<RouteData> {
 
         @Override
         public int compare(RouteData o1, RouteData o2) {
             return o1.getStopTime().getArrivalTime().compareTo(o2.getStopTime().getArrivalTime());
         }
+    }
+
+    public List<RouteData> getRouteData(String serviceId, Integer arrivalTime, List<GtfsStops> stopList, Session session, HttpServletRequest request) {
+        List<RouteData> routeList = new ArrayList<>();
+        for (GtfsStops stop : stopList) {
+            List<GtfsStopTimes> stopTimesList;
+
+            if (request.getParameter("count") != null) {
+                stopTimesList = session.createCriteria(GtfsStopTimes.class, "stopTime")
+                        .createAlias("stopTime.gtfsTrips", "trip")
+                        //.createAlias("trip.tripPositionses", "position")
+                        //.setProjection(Projections.sqlProjection("sum(cast(position.delay as signed)+ arrivalTime) as timewdelay", new String[] {"timewdelay"} , new Type[] {Hibernate.}))
+                        .add(Restrictions.eq("gtfsStops", stop))
+                        .add(Restrictions.ge("arrivalTime", arrivalTime))
+                        .add(Restrictions.eq("trip.serviceIdId", serviceId))
+                        .addOrder(Order.asc("arrivalTime"))
+                        .setMaxResults(3).list();
+            } else {
+                stopTimesList = session.createCriteria(GtfsStopTimes.class, "stopTime")
+                        .createAlias("stopTime.gtfsTrips", "trip")
+                        .add(Restrictions.eq("gtfsStops", stop))
+                        .add(Restrictions.ge("arrivalTime", arrivalTime))
+                        .add(Restrictions.eq("trip.serviceIdId", serviceId))
+                        .addOrder(Order.asc("arrivalTime"))
+                        .setMaxResults(10).list();
+
+            }
+            for (GtfsStopTimes stopTimes : stopTimesList) {
+                List<TripPositions> tripPositionList = session.createCriteria(TripPositions.class).add(Restrictions.eq("gtfsTrips", stopTimes.getGtfsTrips())).list();
+                TripPositions lastPosition;
+                if (!tripPositionList.isEmpty()) {
+                    lastPosition = tripPositionList.get(0);
+                } else {
+                    logger.info("empty trip positions");
+                    lastPosition = null;
+                }
+                Integer delay = 0;
+                if (lastPosition != null) {
+                    delay = lastPosition.getDelay();
+                }
+                RouteData routeData = new RouteData(stopTimes.getGtfsTrips().getGtfsRoutes(), stopTimes, stopTimes.getGtfsTrips(), lastPosition);
+                routeList.add(routeData);
+            }
+        }
+        return routeList;
     }
 
 }
