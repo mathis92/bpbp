@@ -32,6 +32,7 @@ import stuba.bpbpdatabasemapper.GtfsTrips;
 import stuba.bpbpdatabasemapper.GtfsTripsId;
 import stuba.bpbpdatabasemapper.Poi;
 import stuba.bpbpdatabasemapper.PoisInRoutes;
+import stuba.bpbpdatabasemapper.StopRealTimesHistory;
 import stuba.bpbpdatabasemapper.TripPositions;
 
 /*
@@ -185,6 +186,7 @@ public class VehicleAPI extends HttpServlet {
                     stopsJOB.add("lon", gst.getGtfsStops().getLon());
                     stopsJOB.add("zoneId", gst.getGtfsStops().getZoneId());
                     stopsJOB.add("arrivalTime", gst.getArrivalTime());
+                    stopsJOB.add("stopTimeId", gst.getId());
                     stopsJOB.add("isOnRequest", gst.getPickupType().equals(3) ? "true" : "false");
 
                     stopsJAB.add(stopsJOB);
@@ -217,6 +219,14 @@ public class VehicleAPI extends HttpServlet {
                 transactiongetTripsForStop.commit();
                 sessionGetTripsForStop.close();
                 
+                break;
+            case "/api/vehicle/realStopTime":
+                Session sessionRealStopTime = DatabaseConnector.getSession();
+                Transaction transactionRealStopTime = sessionRealStopTime.beginTransaction();
+                GtfsStopTimes stopTime = (GtfsStopTimes) sessionRealStopTime.get("id", request.getParameter("stopTimeId"));
+                sessionRealStopTime.save(new StopRealTimesHistory(stopTime, Integer.parseInt(request.getParameter("realArrivalTime")), Integer.parseInt(request.getParameter("realDepartureTime"))));
+                transactionRealStopTime.commit();
+                sessionRealStopTime.close();
                 break;
         }
         response.setStatus(HttpServletResponse.SC_OK);
