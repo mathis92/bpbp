@@ -86,7 +86,7 @@ public class VehicleAPI extends HttpServlet {
                 for (GtfsStops stop : gtfsStops) {
                     //List<GtfsStopTimes> stopTimesList = sessionInit.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).addOrder(Order.asc("departureTime")).list();
                     for (GtfsStopTimes stopTime : (List<GtfsStopTimes>) sessionInit.createCriteria(GtfsStopTimes.class).add(Restrictions.eq("gtfsStops", stop)).addOrder(Order.asc("departureTime")).list()) {
-                        int secsFromMidnight = 61020;//Utils.getSecondsFromMidnight();
+                        int secsFromMidnight = Utils.getSecondsFromMidnight();
                         if (stopTime.getDepartureTime() > secsFromMidnight - 600 && stopTime.getDepartureTime() < secsFromMidnight + 600) {
                             if (stopTime.getGtfsTrips().getServiceIdId().equals(Utils.getActualServiceId())) {
                                 if (!stop.getName().equals(stopTime.getGtfsTrips().getTripHeadsign())) {
@@ -211,20 +211,30 @@ public class VehicleAPI extends HttpServlet {
                 Transaction transactiongetTripsForStop = sessionGetTripsForStop.beginTransaction();
 
                 List<GtfsStops> stopList = sessionGetTripsForStop.createCriteria(GtfsStops.class).add(Restrictions.eq("name", request.getParameter("stopName"))).list();
-                
+
                 for (GtfsStops stop : stopList) {
-                    
+
                 }
 
                 transactiongetTripsForStop.commit();
                 sessionGetTripsForStop.close();
-                
+
                 break;
             case "/api/vehicle/realStopTime":
                 Session sessionRealStopTime = DatabaseConnector.getSession();
                 Transaction transactionRealStopTime = sessionRealStopTime.beginTransaction();
-                GtfsStopTimes stopTime = (GtfsStopTimes) sessionRealStopTime.get("id", request.getParameter("stopTimeId"));
+                GtfsStopTimes stopTime = (GtfsStopTimes) sessionRealStopTime.get(GtfsStopTimes.class, Integer.parseInt(request.getParameter("stopTimeId")));
+                //logger.debug(stopTime.getArrivalTime().toString());
+                /*
+                 StopRealTimesHistory srth = new StopRealTimesHistory();
+                 srth.setGtfsStopTimes(stopTime);
+                 srth.setRealArrivalTime(Integer.parseInt(request.getParameter("realArrivalTime")));
+                 srth.setRealDepartureTime(Integer.parseInt(request.getParameter("realDepartureTime")));
+                 */
+                logger.debug("[Real stop time update ] " + stopTime.getGtfsTrips().getGtfsRoutes().getShortName() + " -> " + stopTime.getGtfsTrips().getTripHeadsign() + "\t "+ stopTime.getGtfsStops().getName());
+
                 sessionRealStopTime.save(new StopRealTimesHistory(stopTime, Integer.parseInt(request.getParameter("realArrivalTime")), Integer.parseInt(request.getParameter("realDepartureTime"))));
+                //sessionRealStopTime.save(srth);
                 transactionRealStopTime.commit();
                 sessionRealStopTime.close();
                 break;
@@ -303,11 +313,15 @@ public class VehicleAPI extends HttpServlet {
                  jw.writeObject(coordinatesJOB.build());*/
                 break;
 
-            case "/api/getPoi":
+            case "/api/vehicle/getPoi":
+
                 Session session = DatabaseConnector.getSession();
+                Transaction tx = session.beginTransaction();
                 List<Poi> poiList = session.createCriteria(Poi.class).list();
-                session.getTransaction().commit();
+                //  System.out.println(poiList.size() + " PICE PISEM TU NEJAKY TEXT ABY SOM VEDEC VOCOGO ");
+                tx.commit();
                 session.close();
+
                 JsonArrayBuilder poiJAB = Json.createArrayBuilder();
 
                 for (Poi poi : poiList) {
@@ -324,7 +338,7 @@ public class VehicleAPI extends HttpServlet {
                 JsonObjectBuilder poisJOB = Json.createObjectBuilder();
                 poisJOB.add("poiList", poiJAB);
                 JsonObject poisJO = poisJOB.build();
-                System.out.println(poisJO.toString());
+                //s System.out.println(poisJO.toString());
                 jw.writeObject(poisJO);
                 break;
             default: {

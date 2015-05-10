@@ -1,8 +1,6 @@
 package sk.cagani.stuba.bpbp.api;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,14 +18,10 @@ import javax.json.stream.JsonGenerator;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.hibernate.Hibernate;
-
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.criterion.Order;
-import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
-import org.hibernate.type.Type;
 import org.slf4j.LoggerFactory;
 import sk.cagani.stuba.bpbp.device.RouteData;
 import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
@@ -62,8 +56,8 @@ public class DeviceAPI extends HttpServlet {
         Map<String, Object> jwConfig = new HashMap<>();
         jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
         JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream(), Charset.forName("UTF-8"));
-        //   logger.info("[req URI]: " + request.getRequestURI());
-        //  logger.info(request.getParameterMap().toString());
+        logger.info("[req URI]: " + request.getRequestURI());
+        logger.info(request.getParameterMap().toString());
         if (!request.getParameterMap().isEmpty()) {
             switch (request.getParameter("requestContent")) {
                 case "CurrentStop": {
@@ -86,7 +80,7 @@ public class DeviceAPI extends HttpServlet {
                         routeList = getRouteData(Utils.getActualServiceId(), secondsSinceMidnight, stopList, session, request);
 
                         //        logger.debug(routeList.size() + " velkost routeListu");
-                        logger.debug("size route list " + routeList.size());
+                        //    logger.debug("size route list " + routeList.size());
                         if (routeList.isEmpty() || (routeList.size() <= routeCountRequest)) {
                             //             logger.debug("route List je empty vchadzam do dalsieho citania");
                             routeListTomorrow = getRouteData(Utils.getTomorrowServiceId(), 3600, stopList, session, request);
@@ -210,21 +204,20 @@ public class DeviceAPI extends HttpServlet {
                 }
                 case "vehiclesPositions": {
                     logger.debug("[vehiclesPositions]");
-                    //     logger.debug("in api call vehiclePositions " + request.getRequestURI() + " " + request.getRequestURL());
+                    logger.debug("in api call vehiclePositions " + request.getRequestURI() + " " + request.getRequestURL());
                     Session session = DatabaseConnector.getSession();
                     Transaction tx = session.beginTransaction();
                     double northLon = Double.parseDouble(request.getParameter("northLon"));
                     double eastLat = Double.parseDouble(request.getParameter("eastLat"));
                     double westLat = Double.parseDouble(request.getParameter("westLat"));
                     double southLon = Double.parseDouble(request.getParameter("southLon"));
-
-                    //   System.out.println("lat " + (westLat) + " " + (eastLat) + " lon " + (northLon) + " " + (southLon));
-                    List<TripPositions> tripPositionsList = session.createCriteria(TripPositions.class).add(Restrictions.between("lat", westLat, eastLat)).add(Restrictions.between("lon", southLon, northLon)).add(Restrictions.eq("state", "a")).list();
-
                     JsonArrayBuilder vehicleJAB = Json.createArrayBuilder();
-                    //   System.out.println(tripPositionsList.size());
+                    //   System.out.println("lat " + (westLat) + " " + (eastLat) + " lon " + (northLon) + " " + (southLon));
+                    List<TripPositions> tripPositionsList = session.createCriteria(TripPositions.class)
+                            .add(Restrictions.between("lat", westLat, eastLat))
+                            .add(Restrictions.between("lon", southLon, northLon))
+                            .add(Restrictions.eq("state", "a")).list();
                     for (TripPositions tripPosition : tripPositionsList) {
-                        //        logger.debug((Utils.getSecondsFromMidnight(tripPosition.getModifiedAt()) - tripPosition.getDelay()) + " next stop arrival time " + tripPosition.getGtfsTrips().getId().getId());
                         List<GtfsStopTimes> nextStopTime = session.createCriteria(GtfsStopTimes.class, "stopTimes")
                                 .add(Restrictions.eq("stopTimes.gtfsTrips", tripPosition.getGtfsTrips()))
                                 .addOrder(Order.asc("arrivalTime"))
@@ -265,7 +258,7 @@ public class DeviceAPI extends HttpServlet {
                     tx.commit();
                     session.close();
                     JsonArray vehicleJA = vehicleJAB.build();
-                    //    System.out.println(vehicleJA.toString());
+                    System.out.println(vehicleJA.toString());
                     jw.writeArray(vehicleJA);
                     break;
                 }
@@ -375,29 +368,68 @@ public class DeviceAPI extends HttpServlet {
 
     public List<RouteData> getRouteData(String serviceId, Integer arrivalTime, List<GtfsStops> stopList, Session session, HttpServletRequest request) {
         List<RouteData> tripList = new ArrayList<>();
+        System.out.println("GET ROUTE DATA");
         for (GtfsStops stop : stopList) {
             List<GtfsStopTimes> stopTimesList;
 
             if (request.getParameter("count") != null) {
+                int count = Integer.parseInt(request.getParameter("count"));
                 stopTimesList = session.createCriteria(GtfsStopTimes.class, "stopTime")
                         .createAlias("stopTime.gtfsTrips", "trip")
-                        //.createAlias("trip.tripPositionses", "position")
-                        //.setProjection(Projections.sqlProjection("sum(cast(position.delay as signed)+ arrivalTime) as timewdelay", new String[] {"timewdelay"} , new Type[] {Hibernate.}))
                         .add(Restrictions.eq("gtfsStops", stop))
-                        .add(Restrictions.ge("arrivalTime", arrivalTime - 3600))
+                        .add(Restrictions.ge("arrivalTime", arrivalTime))
                         .add(Restrictions.eq("trip.serviceIdId", serviceId))
                         .addOrder(Order.asc("arrivalTime"))
-                        .list();//.setMaxResults(Integer.parseInt(request.getParameter("count"))).list();
+                        .setMaxResults(count).list();
+                /*
+                 stopTimesList =  session.createSQLQuery("select `id`, `stop_agencyId`, `stop_id` `trip_agencyId`, `trip_id`, `stopSequence`, `arrivalTime`, `departureTime`, `pickupType`, `dropOffType` from (select `gtfs_stop_times`.*, cast((`gtfs_stop_times`.`arrivalTime` + \n" +
+                 "		CASE WHEN `trip_positions`.`delay` IS NULL THEN 0 ELSE `trip_positions`.`delay` END) as SIGNED) as 'tmp'  \n" +
+                 "		FROM `gtfs_stop_times`\n" +
+                 "			left join `trip_positions`\n" +
+                 "				on `gtfs_stop_times`.`trip_id` = `trip_positions`.`gtfs_trip_id`\n" +
+                 "			left join `gtfs_trips`\n" +
+                 "				on `gtfs_stop_times`.`trip_id` = `gtfs_trips`.`id`\n" +
+                 "			where `stop_id` = "+stop.getId().getId()+" and `serviceId_id` = 'Prac.dny_0'\n" +
+                 "		) as table1\n" +
+                 "		where tmp > "+arrivalTime+"\n" +
+                 "		ORDER BY tmp ASC\n" +
+                 "		limit "+ 3).list();
+              
+                 Criteria crit = session.createCriteria(GtfsStopTimes.class, "stopTime")
+                 .createAlias("stopTime.gtfsTrips", "trip")
+                 .createAlias("trip.tripPositionses", "tripPos")
+                 .add(Restrictions.eq("tripPos.state", "a"));
+                 //.createAlias("trip.tripPositionses", "position")
+                 //.setProjection(Projections.sqlProjection("sum(cast(position.delay as signed)+ arrivalTime) as timewdelay", new String[] {"timewdelay"} , new Type[] {Hibernate.}))
+                 crit.setProjection(Projections.projectionList()
+                 .add(Projections.property("stopTime.arrivalTime"))
+                 .add(Projections.property("tripPos.delay"))
+                 .add(Projections.alias(Projections.sqlProjection(
+                 "arrivalTime + delay as timeWDelay",
+                 new String[]{"timeWDelay"},
+                 new Type[]{IntegerType.INSTANCE}
+                 )
+                 ,"timeWDelay")));
+                 System.out.println("\n" + crit.toString());
+                 crit.add(Restrictions.eq("gtfsStops", stop))
+                 .add(Restrictions.ge("stopTime.timeWDelay", arrivalTime))
+                 .add(Restrictions.eq("trip.serviceIdId", serviceId))
+                 .addOrder(Order.asc("arrivalTime"))
+                 .setMaxResults(Integer.parseInt(request.getParameter("count")));
+                 stopTimesList = crit.list();
+                 System.out.println(stopTimesList.size());
+                 */
             } else {
                 stopTimesList = session.createCriteria(GtfsStopTimes.class, "stopTime")
                         .createAlias("stopTime.gtfsTrips", "trip")
                         .add(Restrictions.eq("gtfsStops", stop))
-                        .add(Restrictions.ge("arrivalTime", arrivalTime - 3600))
+                        .add(Restrictions.ge("arrivalTime", arrivalTime))
                         .add(Restrictions.eq("trip.serviceIdId", serviceId))
                         .addOrder(Order.asc("arrivalTime"))
-                        .list();//.setMaxResults(10).list();
+                        .setMaxResults(10).list();
 
             }
+
             for (GtfsStopTimes stopTimes : stopTimesList) {
                 TripPositions tripPosition = (TripPositions) session.createCriteria(TripPositions.class)
                         .add(Restrictions.eq("gtfsTrips", stopTimes.getGtfsTrips()))
@@ -408,10 +440,10 @@ public class DeviceAPI extends HttpServlet {
                 if (tripPosition != null) {
                     delay = tripPosition.getDelay();
                 }
-                if (stopTimes.getArrivalTime() + delay >= arrivalTime) {
-                    RouteData routeData = new RouteData(stopTimes.getGtfsTrips().getGtfsRoutes(), stopTimes, stopTimes.getGtfsTrips(), tripPosition);
-                    tripList.add(routeData);
-                }
+                //if (stopTimes.getArrivalTime() + delay >= arrivalTime) {
+                RouteData routeData = new RouteData(stopTimes.getGtfsTrips().getGtfsRoutes(), stopTimes, stopTimes.getGtfsTrips(), tripPosition);
+                tripList.add(routeData);
+                //}
             }
         }
         return tripList;
