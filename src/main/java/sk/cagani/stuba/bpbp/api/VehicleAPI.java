@@ -324,13 +324,16 @@ public class VehicleAPI extends HttpServlet {
                  jw.writeObject(coordinatesJOB.build());*/
                 break;
 
-            case "/api/getPoi":
+            case "/api/vehicle/getPoi":
+
                 Session session = DatabaseConnector.getSession();
+                Transaction tx = session.beginTransaction();
                 List<Poi> poiList = session.createCriteria(Poi.class).list();
 
                 session.getTransaction()
                         .commit();
                 session.close();
+
                 JsonArrayBuilder poiJAB = Json.createArrayBuilder();
 
                 for (Poi poi : poiList) {

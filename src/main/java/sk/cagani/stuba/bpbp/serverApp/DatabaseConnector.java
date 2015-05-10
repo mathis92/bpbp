@@ -81,14 +81,13 @@ public class DatabaseConnector {
             JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(fos, Charset.forName("UTF-8"));
             Session session = getSession();
             Transaction tx = session.beginTransaction();
-            List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class).addOrder(Order.asc("name")).list();
 
-            JsonArrayBuilder stopsJAB = Json.createArrayBuilder();
+                        JsonArrayBuilder stopsJAB = Json.createArrayBuilder();
             List<StopData> stopDataList = new ArrayList<>();
 
+            List<GtfsStops> stopsList = session.createCriteria(GtfsStops.class).addOrder(Order.asc("name")).list();
             for (GtfsStops stop : stopsList) {
                 StopData data = null;
-
                 data = new StopData();
                 data.stop = stop;
                 List<GtfsRoutes> routeList = session.createCriteria(GtfsStopTimes.class, "stopTime")
@@ -96,8 +95,10 @@ public class DatabaseConnector {
                         .createAlias("trip.gtfsRoutes", "route")
                         .add(Restrictions.eq("gtfsStops", stop))
                         .addOrder(Order.asc("route.shortName"))
-                        .setProjection(Projections.distinct(Projections.projectionList().add(Projections.property("route.shortName"), "shortName")))
-                        .setResultTransformer(Transformers.aliasToBean(GtfsRoutes.class)).list();
+                        .setProjection(Projections.distinct(Projections.projectionList()
+                                .add(Projections.property("route.shortName"), "shortName")))
+                        .setResultTransformer(Transformers.aliasToBean(GtfsRoutes.class))
+                        .list();
 
                 data.setRouteList(routeList);
                 stopDataList.add(data);
