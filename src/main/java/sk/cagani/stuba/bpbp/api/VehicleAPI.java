@@ -226,10 +226,11 @@ public class VehicleAPI extends HttpServlet {
                 Transaction transactionRealStopTime = null;
                 try {
                     transactionRealStopTime = sessionRealStopTime.beginTransaction();
+                    System.out.println(request.getParameter("stopTimeId"));
                     
-                    GtfsStopTimes stopTime = (GtfsStopTimes) sessionRealStopTime.get("id", request.getParameter("stopTimeId"));
+                    GtfsStopTimes stopTime = (GtfsStopTimes) sessionRealStopTime.get(GtfsStopTimes.class, Integer.parseInt(request.getParameter("stopTimeId")));
                     sessionRealStopTime.save(new StopRealTimesHistory(stopTime, Integer.parseInt(request.getParameter("realArrivalTime")), Integer.parseInt(request.getParameter("realDepartureTime"))));
-                    transactionRealStopTime.commit();                    
+                    transactionRealStopTime.commit();
                 } catch (HibernateException | NumberFormatException e) {
                     if (transactionRealStopTime != null) {
                         transactionRealStopTime.rollback();
@@ -238,6 +239,27 @@ public class VehicleAPI extends HttpServlet {
                 } finally {
                     sessionRealStopTime.close();
                 }
+                break;
+
+            case "/api/vehicle/savePoi":
+                System.out.println(request.getParameterMap().toString());
+                System.out.println("poi " + request.getParameter("poiTitle"));
+                System.out.println("\n" + request.toString());
+
+                Session savePoi = DatabaseConnector.getSession();
+                Transaction transactionSavePoi = null;
+                try {
+                    transactionSavePoi = savePoi.beginTransaction();
+                    transactionSavePoi.commit();
+                } catch (HibernateException | NumberFormatException e) {
+                    if (transactionSavePoi != null) {
+                        transactionSavePoi.rollback();
+                        throw e;
+                    }
+                } finally {
+                    savePoi.close();
+                }
+
                 break;
         }
 

@@ -2,13 +2,115 @@ package sk.cagani.stuba.bpbp.webportal;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import javax.json.Json;
+import javax.json.JsonArrayBuilder;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
+import javax.json.JsonWriter;
+import javax.json.stream.JsonGenerator;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.hibernate.criterion.Restrictions;
+import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
+import stuba.bpbpdatabasemapper.GtfsRoutes;
+import stuba.bpbpdatabasemapper.Poi;
+import stuba.bpbpdatabasemapper.PoisInRoutes;
 
 public class ResourceServlet extends HttpServlet {
-    
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        System.out.println("[ResourceServlet POST]  url: " + request.getRequestURI());
+        response.setContentType("text/json");
+        Map<String, Object> jwConfig = new HashMap<>();
+        jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
+        JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
+
+        switch (request.getRequestURI()) {
+            case "/savePoi":
+                String poiTitle = request.getParameter("poiTitle");
+                String videoTitle = request.getParameter("videoTitle");
+                String routeNum = request.getParameter("routeNumber");
+                Double lat = Double.parseDouble(request.getParameter("lat"));
+                Double lon = Double.parseDouble(request.getParameter("lon"));
+
+                System.out.println(poiTitle + " " + videoTitle + " " + routeNum + " " + lat + " " + lon + " " + poiTitle.isEmpty() + " " + lat.isNaN());
+
+                if (!(poiTitle.isEmpty() && videoTitle.isEmpty() && routeNum.isEmpty())) {
+                    Session sessionSavePoi = DatabaseConnector.getSession();
+                    Transaction transactionSavePoi = null;
+                    try {
+                        transactionSavePoi = sessionSavePoi.beginTransaction();
+
+                        Poi poi = new Poi(lat, lon, 20, poiTitle, videoTitle);
+                        sessionSavePoi.save(poi);
+
+                        GtfsRoutes route = (GtfsRoutes) sessionSavePoi.createCriteria(GtfsRoutes.class).add(Restrictions.eq("shortName", routeNum)).uniqueResult();
+                        if (route != null) {
+                            PoisInRoutes poisInRoutes = new PoisInRoutes(route, poi);
+                            sessionSavePoi.save(poisInRoutes);
+                        }
+                        transactionSavePoi.commit();
+                    } catch (HibernateException e) {
+                        if (transactionSavePoi != null) {
+                            transactionSavePoi.rollback();
+                            throw e;
+                        }
+                    } finally {
+                        sessionSavePoi.close();
+                    }
+                }
+                break;
+            case "/getPoi":                
+                Session sessionGetPoi = DatabaseConnector.getSession();
+                Transaction transactionGetPoi = null;
+                try {
+                    transactionGetPoi = sessionGetPoi.beginTransaction();
+                    List<Poi> poiList = sessionGetPoi.createCriteria(Poi.class).list();
+
+                    JsonArrayBuilder poiJAB = Json.createArrayBuilder();
+
+                    for (Poi poi : poiList) {
+                        JsonObjectBuilder poiJOB = Json.createObjectBuilder();
+                        poiJOB.add("id", poi.getId());
+                        poiJOB.add("title", poi.getTitle());
+                        poiJOB.add("lat", poi.getLat());
+                        poiJOB.add("lon", poi.getLon());
+                        poiJOB.add("radius", poi.getRadius());
+                        poiJOB.add("filePath", poi.getFilePath());
+
+                        poiJAB.add(poiJOB);
+                    }
+
+                    JsonObjectBuilder poisJOB = Json.createObjectBuilder();
+
+                    poisJOB.add("poiList", poiJAB);
+                    JsonObject poisJO = poisJOB.build();
+
+                    System.out.println(poisJO.toString());
+                    jw.writeObject(poisJO);
+
+                } catch (HibernateException e) {
+                    if (transactionGetPoi != null) {
+                        transactionGetPoi.rollback();
+                        throw e;
+                    }
+                } finally {
+                    sessionGetPoi.close();
+                }
+                break;
+        }
+        response.setStatus(HttpServletResponse.SC_OK);
+    }
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String requestUrl = request.getRequestURI();

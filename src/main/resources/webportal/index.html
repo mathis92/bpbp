@@ -12,34 +12,69 @@ and open the template in the editor.
         <script type="text/javascript" src="js/jquery.js"></script>
         <script type="text/javascript" src="js/bootstrap.js"></script>
         <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBx651lQyHhdaW1nUFA2xF-ltL2Qv179nA"></script>
-        
+
         <script type="text/javascript" src="js/main.js"></script>
-        
+
         <link rel="stylesheet" href="css/bootstrap.css"/>
         <link rel="stylesheet" href="css/bootstrap-theme.css"/>
 
         <link href="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/bootstrap3-editable/css/bootstrap-editable.css" rel="stylesheet"/>
         <script src="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/bootstrap3-editable/js/bootstrap-editable.min.js"></script>
     </head>
-    <body>
+    <body>                
         <div class="container-fluid">
             <div style="width: 80%; min-height: 500px;" id="map-canvas"></div>
             <div style="width: 80%">
-            <table class="table table-striped" id="testTable">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Latitude</th>
-                        <th>Longitude</th>
-                        <th>Accuracy</th>
-                        <th>Time</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-            <div class="alert alert-danger" id="testAlert"></div></div>
+                <table class="table table-striped" id="poiTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Názov bodu</th>
+                            <th>Názov video súboru</th>
+                            <th>Zemepisná výška</th>
+                            <th>Zemepisná šírka</th>
+                            <th>Okruh</th>                            
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div class="alert alert-danger" id="testAlert"></div></div>
         </div>
-    </body>
+        <!-- Modal -->
+
+        <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="myModalLabel">Modal title</h4>
+                    </div>
+                    <div class="modal-body">
+                        <form class="form-horizontal" style="margin-left: 10px; margin-right: 10px;" role="form" id="myForm" method="POST">
+                            <div class="form-group">
+                                <label for="filterName" class="control-label">Názov bodu záujmu</label>                           
+                                <input type="text" name="poiTitle" class="form-control" placeholder="piš more..">                            
+                            </div>
+
+                            <div style="margin-top: 10px;" class="form-group">
+                                <label for="filterName" class="control-label">Názov pčžadovaného videjo suboru nevjem</label>                           
+                                <input type="text" name="videoTitle" class="form-control" placeholder="Napíšte názov súboru aj s príponou..">                            
+                            </div>
+
+                            <div style="margin-top: 10px;" class="form-group">
+                                <label for="filterName" class="control-label">Číslo linky</label>                           
+                                <input type="text" name="routeNumber" class="form-control" placeholder="write číslo..">                            
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" onclick="javascript:reloadPage();" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="submit" onclick="javascript:doSubmit();" class="btn btn-primary">Save changes</button>
+                        <div style="margin-top: 10px;" id="myAlert" class="alert alert-success" role="alert"><strong>Bod záujmu úspešne pridaný!</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>   
 </html>
