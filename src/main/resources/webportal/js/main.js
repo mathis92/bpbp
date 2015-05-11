@@ -37,12 +37,14 @@ var lastInfowindow = null;
 var infoWindowContent = [];
 var infowindow = new google.maps.InfoWindow();
 
+var poiArray;
+
 $(document).ready(function() {
     //fetch_location();
     //map_initialize();    
     $.post("/getPoi", null, function(data) {
         var html = "";
-        var poiArray = data.poiList;
+        poiArray = data.poiList;
         for (var i in poiArray) {
             var poi = poiArray[i];
             html += "<tr>";
@@ -69,8 +71,8 @@ $(document).ready(function() {
                     '</div>' +
                     '<h4 id="firstHeading" class="firstHeading">' + poi.title + '</h4>' +
                     '</div>' +
-                    '<button type="button" onclick="editPoi(' + poi.id + ');" class="btn btn-default" data-dismiss="modal">Upraviť</button>' +
-                    '<button type="button" onclick="deletePoi(' + poi.id + ');" class="btn btn-default" data-dismiss="modal">Zmazať</button>';
+                    '<button type="button" onclick="editPoi(' + i + ');" class="btn btn-default" data-dismiss="modal">Upraviť</button>' +
+                    '<button type="button" onclick="deletePoi(' + i + ');" class="btn btn-default" data-dismiss="modal">Zmazať</button>';
 
             /*
              infoWindows[i] = new google.maps.InfoWindow({
@@ -87,7 +89,7 @@ $(document).ready(function() {
                 return function() {
                     infowindow.setContent(infoWindowContent[innerKey]);
                     infowindow.open(map, mapMarkers[innerKey]);
-                }
+                };
             }(i));
         }
 
@@ -138,12 +140,23 @@ function doSubmit() {
     $('#myAlert').fadeIn();
 }
 
+
+
 function reloadPage() {
     location.reload();
 }
 
 function editPoi(id) {
     alert("edit" + id);
+
+    document.getElementById('poiTitleInput').value = poiArray[id].title;
+    document.getElementById('videoTitleInput').value = poiArray[id].filePath;
+    document.getElementById('routeNumber').value = poiArray[id].routes;
+    lat = poiArray[id].lat;
+    lon = poiArray[id].lon;
+    $('#myModal').modal('show');
+    document.getElementById('myModalLabel').innerHTML = '<strong>Upraviť bod záujmu pre pozíciu:</strong> ' + poiArray[id].lat.toFixed(5) + ', ' + poiArray[id].lon.toFixed(5);
+    $('#myAlert').hide();
 }
 
 function deletePoi(id) {
