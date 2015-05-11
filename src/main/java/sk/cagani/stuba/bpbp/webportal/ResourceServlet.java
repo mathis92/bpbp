@@ -65,7 +65,7 @@ public class ResourceServlet extends HttpServlet {
                         sessionSavePoi.saveOrUpdate(poi);
 
                         routeNum = routeNum.replace(" ", "");
-                        String[] routes = routeNum.split(",");
+
                         String[] unique = new HashSet<>(Arrays.asList(routeNum.split(","))).toArray(new String[0]);
 
                         for (String splitRoute : unique) {

@@ -118,8 +118,8 @@ $(document).ready(function() {
 
 function doSubmit() {
     $.ajax({
-        url: 'http://bpbp.ctrgn.net/savePoi', //this is the submit URL
-        type: 'POST', //or POST
+        url: 'http://bpbp.ctrgn.net/savePoi',
+        type: 'POST',
         data: $('#myForm').serialize() + "&lat=" + lat + "&lon=" + lon + "&id=" + idToUpdate,
         success: function(data) {
             alert('successfully submitted');
