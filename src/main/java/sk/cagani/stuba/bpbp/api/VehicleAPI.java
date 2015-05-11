@@ -226,9 +226,8 @@ public class VehicleAPI extends HttpServlet {
                 Transaction transactionRealStopTime = null;
                 try {
                     transactionRealStopTime = sessionRealStopTime.beginTransaction();
-                    System.out.println(request.getParameter("stopTimeId"));
                     
-                    GtfsStopTimes stopTime = (GtfsStopTimes) sessionRealStopTime.get(GtfsStopTimes.class, Integer.parseInt(request.getParameter("stopTimeId")));
+                    GtfsStopTimes stopTime = (GtfsStopTimes) sessionRealStopTime.get(GtfsStopTimes.class, Integer.parseInt(request.getParameter("stopTimeId")));                    
                     sessionRealStopTime.save(new StopRealTimesHistory(stopTime, Integer.parseInt(request.getParameter("realArrivalTime")), Integer.parseInt(request.getParameter("realDepartureTime"))));
                     transactionRealStopTime.commit();
                 } catch (HibernateException | NumberFormatException e) {

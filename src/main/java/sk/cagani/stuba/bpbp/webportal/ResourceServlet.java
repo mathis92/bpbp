@@ -2,7 +2,9 @@ package sk.cagani.stuba.bpbp.webportal;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import javax.json.Json;
@@ -42,24 +44,34 @@ public class ResourceServlet extends HttpServlet {
                 String routeNum = request.getParameter("routeNumber");
                 Double lat = Double.parseDouble(request.getParameter("lat"));
                 Double lon = Double.parseDouble(request.getParameter("lon"));
-                
-                System.out.println(poiTitle + " " + videoTitle + " " + routeNum + " " + lat + " " + lon + " " + poiTitle.isEmpty() + " " + lat.isNaN());
+                String id = request.getParameter("id");
+
+                //System.out.println(poiTitle + " " + videoTitle + " " + routeNum + " " + lat + " " + lon + " " + poiTitle.isEmpty() + " " + lat.isNaN());
 
                 if (!(poiTitle.isEmpty() && videoTitle.isEmpty() && routeNum.isEmpty())) {
                     Session sessionSavePoi = DatabaseConnector.getSession();
                     Transaction transactionSavePoi = null;
                     try {
+                        Poi poi = null;
                         transactionSavePoi = sessionSavePoi.beginTransaction();
 
-                        Poi poi = new Poi(lat, lon, 20, poiTitle, videoTitle);
-                        sessionSavePoi.save(poi);
+                        if (!id.isEmpty()) {
+                            poi = (Poi) sessionSavePoi.get(Poi.class, Long.parseLong(id));
+                            sessionSavePoi.delete(poi);
+                        }
+
+                        poi = new Poi(lat, lon, 20, poiTitle, videoTitle);
+
+                        sessionSavePoi.saveOrUpdate(poi);
+
                         routeNum = routeNum.replace(" ", "");
                         String[] routes = routeNum.split(",");
-                        for (String splitRoute : routes) {
+                        String[] unique = new HashSet<>(Arrays.asList(routeNum.split(","))).toArray(new String[0]);
+
+                        for (String splitRoute : unique) {
                             GtfsRoutes route = (GtfsRoutes) sessionSavePoi.createCriteria(GtfsRoutes.class).add(Restrictions.eq("shortName", splitRoute)).uniqueResult();
                             if (route != null) {
-                                PoisInRoutes poisInRoutes = new PoisInRoutes(route, poi);
-                                sessionSavePoi.save(poisInRoutes);
+                                sessionSavePoi.saveOrUpdate(new PoisInRoutes(route, poi));
                             }
                         }
                         transactionSavePoi.commit();
@@ -81,7 +93,7 @@ public class ResourceServlet extends HttpServlet {
                     List<Poi> poiList = sessionGetPoi.createCriteria(Poi.class).list();
 
                     JsonArrayBuilder poiJAB = Json.createArrayBuilder();
-                    
+
                     for (Poi poi : poiList) {
                         List<PoisInRoutes> poisInRouteses = sessionGetPoi.createCriteria(PoisInRoutes.class)
                                 .createAlias("gtfsRoutes", "routes")
@@ -125,6 +137,28 @@ public class ResourceServlet extends HttpServlet {
                     }
                 } finally {
                     sessionGetPoi.close();
+                }
+                break;
+            case "/deletePoi":
+                Session sessionDeletePoi = DatabaseConnector.getSession();
+                Transaction transactionDeletePoi = null;
+                try {
+                    Poi poi = null;
+                    transactionDeletePoi = sessionDeletePoi.beginTransaction();
+                    String idToDel = request.getParameter("id");
+                    
+                    if (idToDel != null) {
+                        poi = (Poi) sessionDeletePoi.get(Poi.class, Long.parseLong(idToDel));
+                        sessionDeletePoi.delete(poi);
+                    }
+                    transactionDeletePoi.commit();
+                } catch (HibernateException e) {
+                    if (transactionDeletePoi != null) {
+                        transactionDeletePoi.rollback();
+                        throw e;
+                    }
+                } finally {
+                    sessionDeletePoi.close();
                 }
                 break;
         }

@@ -2,8 +2,8 @@ var map;
 
 function map_initialize() {
     var mapOptions = {
-        center: {lat: 48.157654, lng: 17.069182},
-        zoom: 15,
+        center: {lat: 48.144773, lng: 17.111540},
+        zoom: 13,
         draggableCursor: 'crosshair'
     };
     map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
@@ -38,10 +38,9 @@ var infoWindowContent = [];
 var infowindow = new google.maps.InfoWindow();
 
 var poiArray;
+var idToUpdate = "";
 
 $(document).ready(function() {
-    //fetch_location();
-    //map_initialize();    
     $.post("/getPoi", null, function(data) {
         var html = "";
         poiArray = data.poiList;
@@ -69,21 +68,14 @@ $(document).ready(function() {
             infoWindowContent[i] = '<div id="content">' +
                     '<div id="siteNotice">' +
                     '</div>' +
-                    '<h4 id="firstHeading" class="firstHeading">' + poi.title + '</h4>' +
+                    '<h4 id="firstHeading" class="firstHeading">Bod ' + poi.title + '</h4>' +
+                    '<h5>Priradený k linkám:</h5>' +
+                    '<h6>' + poi.routes + '</h6>' +
+                    '<h5 style="margin-top: 5px;">Názov video súboru:</h5>' +
+                    '<h6>' + poi.filePath + '</h6>' +
                     '</div>' +
                     '<button type="button" onclick="editPoi(' + i + ');" class="btn btn-default" data-dismiss="modal">Upraviť</button>' +
-                    '<button type="button" onclick="deletePoi(' + i + ');" class="btn btn-default" data-dismiss="modal">Zmazať</button>';
-
-            /*
-             infoWindows[i] = new google.maps.InfoWindow({
-             content: contentString
-             });
-             */
-            /*
-             google.maps.event.addListener(mapMarkers[i], 'click', function() {
-             infowindow[i].open(map, mapMarkers[i]);
-             });
-             */
+                    '<button style="margin-left: 10px;" type="button" onclick="deletePoi(' + i + ');" class="btn btn-default" data-dismiss="modal">Zmazať</button>';
 
             google.maps.event.addListener(mapMarkers[i], 'click', function(innerKey) {
                 return function() {
@@ -92,8 +84,6 @@ $(document).ready(function() {
                 };
             }(i));
         }
-
-
 
         google.maps.event.addListener(map, 'click', function(event) {
             //alert('lat: ' + event.latLng.lat() + ' lon: ' + event.latLng.lng());
@@ -123,7 +113,6 @@ $(document).ready(function() {
             infowindow.setContent(infoWindowContent[num]);
             infowindow.open(map, mapMarkers[num]);
         });
-
     }, "json");
 });
 
@@ -131,35 +120,45 @@ function doSubmit() {
     $.ajax({
         url: 'http://bpbp.ctrgn.net/savePoi', //this is the submit URL
         type: 'POST', //or POST
-        data: $('#myForm').serialize() + "&lat=" + lat + "&lon=" + lon,
+        data: $('#myForm').serialize() + "&lat=" + lat + "&lon=" + lon + "&id=" + idToUpdate,
         success: function(data) {
-            alert('successfully submitted')
-
+            alert('successfully submitted');
         }
     });
     $('#myAlert').fadeIn();
+    $('#mySubmit').disabled = true;
+
+    setTimeout(function() {
+        reloadPage();
+    }, 1200);
 }
 
-
-
-function reloadPage() {
+function reloadPage() {    
     location.reload();
+    idToUpdate = null;
 }
 
-function editPoi(id) {
-    alert("edit" + id);
-
-    document.getElementById('poiTitleInput').value = poiArray[id].title;
-    document.getElementById('videoTitleInput').value = poiArray[id].filePath;
-    document.getElementById('routeNumber').value = poiArray[id].routes;
-    lat = poiArray[id].lat;
-    lon = poiArray[id].lon;
+function editPoi(idToEdit) {
+    idToUpdate = poiArray[idToEdit].id;
+    document.getElementById('poiTitleInput').value = poiArray[idToEdit].title;
+    document.getElementById('videoTitleInput').value = poiArray[idToEdit].filePath;
+    document.getElementById('routeNumber').value = poiArray[idToEdit].routes;
+    lat = poiArray[idToEdit].lat;
+    lon = poiArray[idToEdit].lon;
     $('#myModal').modal('show');
-    document.getElementById('myModalLabel').innerHTML = '<strong>Upraviť bod záujmu pre pozíciu:</strong> ' + poiArray[id].lat.toFixed(5) + ', ' + poiArray[id].lon.toFixed(5);
+    document.getElementById('myModalLabel').innerHTML = '<strong>Upraviť bod záujmu ' + poiArray[idToEdit].title + '</strong>  (pozícia: ' + poiArray[idToEdit].lat.toFixed(5) + ', ' + poiArray[idToEdit].lon.toFixed(5) + ')';
     $('#myAlert').hide();
 }
 
-function deletePoi(id) {
-    alert("delete" + id);
+function deletePoi(idToDelete) {
+    $.ajax({
+        url: 'http://bpbp.ctrgn.net/deletePoi', //this is the submit URL
+        type: 'POST', //or POST
+        data: "id=" + poiArray[idToDelete].id,
+        success: function(data) {
+            alert('successfully submitted');
+        }
+    });
+    reloadPage();
 }
 

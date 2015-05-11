@@ -50,7 +50,7 @@ public class DeviceAPI extends HttpServlet {
     // private Session session;
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        // System.out.println("[POST]");
+        // S.println("[POST]");
         //   System.out.println("\n\n" + DatabaseConnector.getStatistics() + "\n\n");
         response.setContentType("text/json; charset=UTF-8");
         Map<String, Object> jwConfig = new HashMap<>();
@@ -258,7 +258,7 @@ public class DeviceAPI extends HttpServlet {
                     tx.commit();
                     session.close();
                     JsonArray vehicleJA = vehicleJAB.build();
-                    System.out.println(vehicleJA.toString());
+                    //System.out.println(vehicleJA.toString());
                     jw.writeArray(vehicleJA);
                     break;
                 }
@@ -306,17 +306,17 @@ public class DeviceAPI extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        System.out.println("[GET]");
+        //System.out.println("[GET]");
         response.setContentType("text/json");
         Map<String, Object> jwConfig = new HashMap<>();
         jwConfig.put(JsonGenerator.PRETTY_PRINTING, true);
         JsonWriter jw = Json.createWriterFactory(jwConfig).createWriter(response.getOutputStream());
-        System.out.println("[req URI]: " + request.getRequestURI());
+        //System.out.println("[req URI]: " + request.getRequestURI());
         Map<String, String[]> parameterMap = request.getParameterMap();
-        System.out.println(parameterMap.toString());
+        //System.out.println(parameterMap.toString());
         switch (request.getParameter("requestContent")) {
             case "CurrentStop": {
-                System.out.println("MAM TO TU");
+                //System.out.println("MAM TO TU");
             }
         }
 
@@ -368,7 +368,7 @@ public class DeviceAPI extends HttpServlet {
 
     public List<RouteData> getRouteData(String serviceId, Integer arrivalTime, List<GtfsStops> stopList, Session session, HttpServletRequest request) {
         List<RouteData> tripList = new ArrayList<>();
-        System.out.println("GET ROUTE DATA");
+        //System.out.println("GET ROUTE DATA");
         for (GtfsStops stop : stopList) {
             List<GtfsStopTimes> stopTimesList;
 
