@@ -41,7 +41,7 @@ public class ResourceServlet extends HttpServlet {
                 String routeNum = request.getParameter("routeNumber");
                 Double lat = Double.parseDouble(request.getParameter("lat"));
                 Double lon = Double.parseDouble(request.getParameter("lon"));
-
+                
                 System.out.println(poiTitle + " " + videoTitle + " " + routeNum + " " + lat + " " + lon + " " + poiTitle.isEmpty() + " " + lat.isNaN());
 
                 if (!(poiTitle.isEmpty() && videoTitle.isEmpty() && routeNum.isEmpty())) {
@@ -77,7 +77,7 @@ public class ResourceServlet extends HttpServlet {
                     List<Poi> poiList = sessionGetPoi.createCriteria(Poi.class).list();
 
                     JsonArrayBuilder poiJAB = Json.createArrayBuilder();
-
+                    
                     for (Poi poi : poiList) {
                         JsonObjectBuilder poiJOB = Json.createObjectBuilder();
                         poiJOB.add("id", poi.getId());
@@ -86,7 +86,7 @@ public class ResourceServlet extends HttpServlet {
                         poiJOB.add("lon", poi.getLon());
                         poiJOB.add("radius", poi.getRadius());
                         poiJOB.add("filePath", poi.getFilePath());
-
+                        
                         poiJAB.add(poiJOB);
                     }
 
