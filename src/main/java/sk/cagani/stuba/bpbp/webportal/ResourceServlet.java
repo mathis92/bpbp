@@ -18,6 +18,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 import sk.cagani.stuba.bpbp.serverApp.DatabaseConnector;
 import stuba.bpbpdatabasemapper.GtfsRoutes;
@@ -52,11 +53,14 @@ public class ResourceServlet extends HttpServlet {
 
                         Poi poi = new Poi(lat, lon, 20, poiTitle, videoTitle);
                         sessionSavePoi.save(poi);
-
-                        GtfsRoutes route = (GtfsRoutes) sessionSavePoi.createCriteria(GtfsRoutes.class).add(Restrictions.eq("shortName", routeNum)).uniqueResult();
-                        if (route != null) {
-                            PoisInRoutes poisInRoutes = new PoisInRoutes(route, poi);
-                            sessionSavePoi.save(poisInRoutes);
+                        routeNum = routeNum.replace(" ", "");
+                        String[] routes = routeNum.split(",");
+                        for (String splitRoute : routes) {
+                            GtfsRoutes route = (GtfsRoutes) sessionSavePoi.createCriteria(GtfsRoutes.class).add(Restrictions.eq("shortName", splitRoute)).uniqueResult();
+                            if (route != null) {
+                                PoisInRoutes poisInRoutes = new PoisInRoutes(route, poi);
+                                sessionSavePoi.save(poisInRoutes);
+                            }
                         }
                         transactionSavePoi.commit();
                     } catch (HibernateException e) {
@@ -69,7 +73,7 @@ public class ResourceServlet extends HttpServlet {
                     }
                 }
                 break;
-            case "/getPoi":                
+            case "/getPoi":
                 Session sessionGetPoi = DatabaseConnector.getSession();
                 Transaction transactionGetPoi = null;
                 try {
@@ -79,6 +83,11 @@ public class ResourceServlet extends HttpServlet {
                     JsonArrayBuilder poiJAB = Json.createArrayBuilder();
                     
                     for (Poi poi : poiList) {
+                        List<PoisInRoutes> poisInRouteses = sessionGetPoi.createCriteria(PoisInRoutes.class)
+                                .createAlias("gtfsRoutes", "routes")
+                                .add(Restrictions.eq("poi", poi)).addOrder(Order.asc("routes.shortName"))
+                                .list();
+
                         JsonObjectBuilder poiJOB = Json.createObjectBuilder();
                         poiJOB.add("id", poi.getId());
                         poiJOB.add("title", poi.getTitle());
@@ -86,7 +95,18 @@ public class ResourceServlet extends HttpServlet {
                         poiJOB.add("lon", poi.getLon());
                         poiJOB.add("radius", poi.getRadius());
                         poiJOB.add("filePath", poi.getFilePath());
-                        
+                        String routes = null;
+                        for (PoisInRoutes pir : poisInRouteses) {
+                            if (routes == null) {
+                                routes = pir.getGtfsRoutes().getShortName();
+                            } else {
+                                routes += ", " + pir.getGtfsRoutes().getShortName();
+                            }
+                        }
+                        if (routes == null) {
+                            routes = "";
+                        }
+                        poiJOB.add("routes", routes);
                         poiJAB.add(poiJOB);
                     }
 
