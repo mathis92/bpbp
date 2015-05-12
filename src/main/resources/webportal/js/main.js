@@ -45,15 +45,15 @@ $(document).ready(function() {
         var html = "";
         poiArray = data.poiList;
         for (var i in poiArray) {
-            var poi = poiArray[i];
+            var poi = poiArray[i];            
             html += "<tr>";
-            html += "<td>" + (i + 1) + ".</td>";
-            html += "<td><strong><a href=\"#\" class=\"poi-name\" data-poi-id=\"" + i + "\">" + poi.title + "</a></strong></td>";
+            html += "<td>" + (+i + 1) + ".</td>";
+            html += "<td><strong>" + poi.title + "</strong></td>";
             html += "<td>" + poi.filePath + "</td>";
-            html += "<td>" + poi.lat.toFixed(5) + "</td>";
-            html += "<td>" + poi.lon.toFixed(5) + "</td>";
+            html += "<td>" + poi.lat.toFixed(6) + "</td>";
+            html += "<td>" + poi.lon.toFixed(6) + "</td>";
             html += "<td>" + poi.radius + "</td>";
-            html += "<td><a href=\"#\" data-poi-goto=\"" + i + "\">Show on map</a>";
+            html += "<td><a href=\"#\" data-poi-goto=\"" + i + "\">Ukázať na mape</a>";
             html += "</tr>";
 
             var myLatlng = new google.maps.LatLng(poi.lat, poi.lon);
@@ -86,26 +86,14 @@ $(document).ready(function() {
         }
 
         google.maps.event.addListener(map, 'click', function(event) {
-            //alert('lat: ' + event.latLng.lat() + ' lon: ' + event.latLng.lng());
             lat = event.latLng.lat();
             lon = event.latLng.lng();
             $('#myModal').modal('show');
             document.getElementById('myModalLabel').innerHTML = '<strong>Vytvoriť bod záujmu pre pozíciu:</strong> ' + event.latLng.lat().toFixed(5) + ', ' + event.latLng.lng().toFixed(5);
             $('#myAlert').hide();
-            //document.getElementById('myAlert').hide();
         });
 
-
-        //map.setCenter(mapMarkers[1].getPositions());
         $("#poiTable tbody").html(html);
-        $("#poiTable tbody a.poi-name").editable({
-            type: "text",
-            placement: "right",
-            success: function(response, newValue) {
-                var message = "<strong>Ty pan! </strong> Si zmeniu idecku " + $(this).attr("data-poi-id") + " nejm na <i>" + newValue + "</i>";
-                $("#testAlert").html(message);
-            }
-        });
 
         $("#poiTable tbody a[data-poi-goto]").click(function() {
             var num = $(this).attr("data-poi-goto");
