@@ -58,6 +58,7 @@ public class VehicleAPI extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        System.out.println("[POST] request length: " + request.getContentLength() + " B   " + Long.parseLong(request.getHeader("Content-Length")) + " B\n" + request.toString());
         //   System.out.println("\n\n" + DatabaseConnector.getStatistics() + "\n\n");
         //      System.out.print("[POST]  ");
         response.setContentType("text/json");
@@ -260,8 +261,7 @@ public class VehicleAPI extends HttpServlet {
                 }
 
                 break;
-        }
-
+        }        
         response.setStatus(HttpServletResponse.SC_OK);
     }
 
